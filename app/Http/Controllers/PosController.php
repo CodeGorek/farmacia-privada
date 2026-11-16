@@ -11,17 +11,17 @@ use App\Models\DetalleVenta;
 use App\Models\LibroControlado;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class PosController extends Controller
 {
-    /**
-     * Motor de cálculo oficial del Simulador de Tarifas Transbank (https://publico.transbank.cl/tarifas)
-     * Rubro: Farmacias y Perfumerías (MCC 5912)
-     * - Débito / Prepago (Redcompra): 1.49% + 19% IVA sobre comisión
-     * - Crédito Nacional / Internacional: 2.29% + 19% IVA sobre comisión
-     */
-    public static function calcularTarifaTransbank(float $montoBruto, string $metodoPago): array
+    // Credenciales públicas oficiales de Integración (Sandbox) de Transbank Webpay Plus REST v1.2
+    private const TBK_SANDBOX_URL = 'https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions';
+    private const TBK_COMMERCE_CODE = '597055555532';
+    private const TBK_API_KEY = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C';
+
+    public static function calcularTarifaTransbank(float $montoBruto, string $metodoPago, ?string $authCodeOverride = null): array
     {
         $metodo = strtolower(trim($metodoPago));
         $tasa = 0.0;
@@ -41,9 +41,9 @@ class PosController extends Controller
         $abonoLiquido = max(0, $montoBruto - $totalDescuentoTbk);
 
         $esTransbank = $tasa > 0;
-        $codigoAutorizacion = $esTransbank
+        $codigoAutorizacion = $authCodeOverride ?: ($esTransbank
             ? 'TBK-' . strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 6))
-            : null;
+            : null);
 
         return [
             'es_transbank' => $esTransbank,
@@ -75,9 +75,9 @@ class PosController extends Controller
             $valorInventario += $unidadesMed * (float) $med->precio_unitario;
         }
 
-        $semaforoCritico = 0;   // <= 30 días
-        $semaforoProximo = 0;   // 31 a 90 días
-        $semaforoOptimo = 0;    // > 90 días
+        $semaforoCritico = 0;
+        $semaforoProximo = 0;
+        $semaforoOptimo = 0;
 
         foreach ($lotes->where('stock_vitrina', '>', 0) as $lote) {
             $dias = (int) now()->startOfDay()->diffInDays($lote->fecha_vencimiento, false);
@@ -94,7 +94,6 @@ class PosController extends Controller
             return $lote->stock_vitrina > 0 && $lote->fecha_vencimiento <= now()->addDays(90);
         })->values();
 
-        // Métricas de ventas del día y conciliación Transbank
         $ventasHoyQuery = Venta::whereDate('created_at', today());
         $ventasHoy = (float) (clone $ventasHoyQuery)->sum('total');
         $descuentosHoy = (float) (clone $ventasHoyQuery)->sum('descuento');
@@ -243,9 +242,144 @@ class PosController extends Controller
         return view('pos.index', compact('medicamentos', 'convenios'));
     }
 
+    /**
+     * Inicia una transacción real en el Sandbox oficial de Transbank Webpay Plus (webpay3gint.transbank.cl)
+     */
+    public function iniciarWebpay(Request $request)
+    {
+        $request->validate([
+            'medicamento_id' => 'required|integer|exists:medicamentos,id',
+            'cantidad' => 'required|integer|min:1',
+            'convenio_id' => 'nullable|integer|exists:convenios,id',
+            'metodo_pago' => 'nullable|string|max:40',
+        ]);
+
+        $medicamento = Medicamento::findOrFail($request->medicamento_id);
+        $stockDisponible = Lote::where('medicamento_id', $medicamento->id)->sum('stock_vitrina');
+
+        if ($stockDisponible < (int) $request->cantidad) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Stock insuficiente en vitrina para iniciar pago en Webpay.',
+            ], 422);
+        }
+
+        $subtotal = (float) $medicamento->precio_unitario * (int) $request->cantidad;
+        $descuento = 0;
+        if ($request->filled('convenio_id')) {
+            $conv = Convenio::find($request->convenio_id);
+            if ($conv && $conv->activo) {
+                $descuento = round($subtotal * ((float) $conv->porcentaje_descuento / 100));
+            }
+        }
+        $montoTotal = (int) max(50, round($subtotal - $descuento));
+        $buyOrder = 'FARM-' . time() . '-' . mt_rand(100, 999);
+        $sessionId = session()->getId() ?: ('SES-' . uniqid());
+
+        // Guardamos los datos de la venta pendiente en sesión para procesarla al volver de Webpay
+        session([
+            'webpay_pending_sale' => $request->only([
+                'medicamento_id',
+                'cantidad',
+                'convenio_id',
+                'metodo_pago',
+                'rut_paciente',
+                'nombre_paciente',
+                'rut_medico',
+                'nombre_medico',
+                'numero_receta',
+            ]),
+        ]);
+
+        $response = Http::withoutVerifying()->withHeaders([
+            'Tbk-Api-Key-Id' => self::TBK_COMMERCE_CODE,
+            'Tbk-Api-Key-Secret' => self::TBK_API_KEY,
+            'Content-Type' => 'application/json',
+        ])->post(self::TBK_SANDBOX_URL, [
+            'buy_order' => $buyOrder,
+            'session_id' => $sessionId,
+            'amount' => $montoTotal,
+            'return_url' => route('pos.webpay.retorno'),
+        ]);
+
+        if ($response->successful()) {
+            $body = $response->json();
+            return response()->json([
+                'status' => 'success',
+                'url' => $body['url'],
+                'token' => $body['token'],
+                'buy_order' => $buyOrder,
+                'amount' => $montoTotal,
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'No se pudo conectar con Webpay Sandbox: ' . $response->body(),
+        ], 500);
+    }
+
+    /**
+     * Retorno oficial desde el formulario Webpay de Transbank (GET/POST con token_ws)
+     */
+    public function retornoWebpay(Request $request)
+    {
+        $token = $request->input('token_ws');
+        $pending = session('webpay_pending_sale');
+
+        if (!$token || !$pending) {
+            return redirect()->route('pos.index')->with('webpay_error', 'Transacción anulada o expirada por el usuario en Webpay.');
+        }
+
+        // Confirmar (Commit) la transacción en Transbank Webpay Plus REST API
+        $response = Http::withoutVerifying()->withHeaders([
+            'Tbk-Api-Key-Id' => self::TBK_COMMERCE_CODE,
+            'Tbk-Api-Key-Secret' => self::TBK_API_KEY,
+            'Content-Type' => 'application/json',
+        ])->put(self::TBK_SANDBOX_URL . '/' . $token);
+
+        if (!$response->successful()) {
+            return redirect()->route('pos.index')->with('webpay_error', 'Error al confirmar transacción con Transbank Webpay.');
+        }
+
+        $tbkData = $response->json();
+        if (($tbkData['response_code'] ?? -1) !== 0 || ($tbkData['status'] ?? '') !== 'AUTHORIZED') {
+            return redirect()->route('pos.index')->with('webpay_error', 'Pago rechazado por el banco emisor en Webpay (Código: ' . ($tbkData['response_code'] ?? 'N/A') . '). No se descontó stock FEFO.');
+        }
+
+        // Mapear el tipo de pago devuelto por Transbank (VD/VP = Débito/Prepago, VN/VC/SI = Crédito)
+        $paymentTypeCode = $tbkData['payment_type_code'] ?? 'VD';
+        $metodoReal = in_array($paymentTypeCode, ['VD', 'VP'], true) ? 'debito' : 'credito';
+        $authCode = 'TBK-' . ($tbkData['authorization_code'] ?? '000000');
+        $last4 = $tbkData['card_detail']['card_number'] ?? 'XXXX';
+
+        // Ejecutar el descuento FEFO y registrar la venta
+        $subRequest = new Request(array_merge($pending, [
+            'metodo_pago' => $metodoReal,
+            'codigo_autorizacion_tbk' => $authCode,
+        ]));
+
+        $jsonResponse = $this->procesarVenta($subRequest);
+        $resData = $jsonResponse->getData(true);
+        session()->forget('webpay_pending_sale');
+
+        if (($resData['status'] ?? '') === 'success') {
+            return redirect()->route('pos.index')->with('webpay_success', [
+                'venta_id' => $resData['venta_id'],
+                'total' => $resData['total'],
+                'buy_order' => $tbkData['buy_order'] ?? '',
+                'authorization_code' => $authCode,
+                'card_number' => $last4,
+                'payment_type' => $paymentTypeCode,
+                'lotes_fefo' => $resData['lotes_fefo'],
+            ]);
+        }
+
+        return redirect()->route('pos.index')->with('webpay_error', $resData['message'] ?? 'Error al descontar stock FEFO.');
+    }
+
     public function procesarVenta(Request $request)
     {
-        // Validación de seguridad (Sanitización)
         $request->validate([
             'medicamento_id' => 'required|integer',
             'cantidad' => 'required|integer|min:1',
@@ -269,7 +403,7 @@ class PosController extends Controller
                 $lotes = Lote::where('medicamento_id', $request->medicamento_id)
                     ->where('stock_vitrina', '>', 0)
                     ->orderBy('fecha_vencimiento', 'asc')
-                    ->lockForUpdate() // Evita condiciones de carrera
+                    ->lockForUpdate()
                     ->get();
 
                 foreach ($lotes as $lote) {
@@ -292,7 +426,6 @@ class PosController extends Controller
                     throw new \Exception('Stock insuficiente en vitrina');
                 }
 
-                // Cálculo de totales y convenio
                 $precioUnitario = (float) $medicamento->precio_unitario;
                 $subtotal = $precioUnitario * (int) $request->cantidad;
                 $descuento = 0;
@@ -306,11 +439,10 @@ class PosController extends Controller
 
                 $total = max(0, $subtotal - $descuento);
                 $metodoPago = $request->input('metodo_pago', 'efectivo');
+                $authCodeOverride = $request->input('codigo_autorizacion_tbk');
 
-                // Simulación de tarifas y abono Transbank (publico.transbank.cl/tarifas)
-                $tbk = self::calcularTarifaTransbank($total, $metodoPago);
+                $tbk = self::calcularTarifaTransbank($total, $metodoPago, $authCodeOverride);
 
-                // Registro de la venta en la tabla 'ventas'
                 $venta = Venta::create([
                     'user_id' => auth()->id(),
                     'convenio_id' => $request->convenio_id,

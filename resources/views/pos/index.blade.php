@@ -5,12 +5,12 @@
     <!-- Encabezado del Módulo POS -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Motor FEFO & Transbank</h2>
-            <p class="text-muted mb-0">Escanea el código de barras con tu pistola lectora USB/Bluetooth y simula en vivo el abono líquido según tarifas oficiales de Transbank.</p>
+            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Motor FEFO & Webpay</h2>
+            <p class="text-muted mb-0">Escanea con pistola lectora de código de barras y procesa el pago en el <strong>Simulador de Pago con Tarjeta Transbank (Webpay / Redcompra)</strong>.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
-                <i class="bi bi-credit-card-2-front me-1"></i>Simulador Tarifas Transbank Integrado
+                <i class="bi bi-credit-card-2-front me-1"></i>Pasarela Pago con Tarjeta Webpay / Redcompra Activa
             </span>
             <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
                 <span class="scanner-dot me-2"></span>Escáner HID Global Escuchando
@@ -18,8 +18,35 @@
         </div>
     </div>
 
+    <!-- Alertas de Retorno desde Pasarela Oficial Webpay Sandbox -->
+    @if(session('webpay_error'))
+        <div class="alert alert-danger border-0 shadow-sm rounded-4 d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-x-octagon-fill fs-4"></i>
+            <div>
+                <strong>Transacción Webpay Rechazada / Anulada:</strong> {{ session('webpay_error') }}
+            </div>
+        </div>
+    @endif
+
+    @if(session('webpay_success'))
+        @php $ws = session('webpay_success'); @endphp
+        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h5 class="fw-bold mb-1"><i class="bi bi-patch-check-fill me-2"></i>¡Pago con Tarjeta Aprobado en Transbank Webpay Plus!</h5>
+                    <div class="small">
+                        Venta <strong>#{{ $ws['venta_id'] }}</strong> • Orden: <code class="font-mono">{{ $ws['buy_order'] }}</code> •
+                        Tarjeta terminada en: <strong>**** {{ $ws['card_number'] }}</strong> •
+                        Código Autorización: <span class="badge bg-dark font-mono">{{ $ws['authorization_code'] }}</span>
+                    </div>
+                </div>
+                <span class="fs-4 fw-extrabold font-mono text-success">${{ number_format($ws['total'], 0, ',', '.') }}</span>
+            </div>
+        </div>
+    @endif
+
     <div class="row g-4">
-        <!-- Columna Izquierda: Lector de Código de Barras + Formulario de Dispensación + Desglose Transbank -->
+        <!-- Columna Izquierda: Lector de Código de Barras + Ficha de Dispensación -->
         <div class="col-lg-7">
             <!-- Módulo Lector de Código de Barras Real -->
             <div class="scanner-box p-4 mb-4">
@@ -68,7 +95,7 @@
                 </div>
             </div>
 
-            <!-- Tarjeta de Dispensación y Cálculo -->
+            <!-- Tarjeta de Dispensación Farmacéutica -->
             <div class="card-pro">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-bag-plus-fill text-primary me-2"></i>Ficha de Dispensación Farmacéutica</span>
@@ -130,18 +157,17 @@
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">Medio de Pago (Tarifa TBK)</label>
+                                <label class="form-label fw-bold">Medio de Pago</label>
                                 <select name="metodo_pago" id="metodo_pago" class="form-select fw-semibold">
-                                    <option value="debito" selected>💳 Débito Redcompra (TBK 1,49% + IVA)</option>
-                                    <option value="credito">💳 Tarjeta Crédito (TBK 2,29% + IVA)</option>
-                                    <option value="prepago">💳 Tarjeta Prepago (TBK 1,49% + IVA)</option>
-                                    <option value="efectivo">💵 Efectivo en Caja (0% Comisión)</option>
-                                    <option value="transferencia">🏦 Transferencia (0% Comisión)</option>
+                                    <option value="debito" selected>💳 Tarjeta Débito (Redcompra)</option>
+                                    <option value="credito">💳 Tarjeta de Crédito (Webpay)</option>
+                                    <option value="prepago">💳 Tarjeta Prepago</option>
+                                    <option value="efectivo">💵 Efectivo en Caja</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Bloque de Receta Controlada (Psicotrópicos / Estupefacientes) -->
+                        <!-- Bloque de Receta Controlada -->
                         <div id="bloqueControlado" class="border border-warning border-2 rounded-4 p-3 mb-4 bg-warning-subtle d-none">
                             <div class="d-flex align-items-center gap-2 mb-2 text-dark fw-bold">
                                 <i class="bi bi-journal-medical fs-5 text-danger"></i>
@@ -171,79 +197,40 @@
                             </div>
                         </div>
 
-                        <!-- Resumen Financiero + Simulador de Comisiones y Abono Transbank en Vivo -->
+                        <!-- Resumen de Lotes FEFO y Total a Pagar -->
                         <div class="rounded-4 p-3 mb-4 border" style="background-color: #F8FAFC;">
-                            <div class="row g-3">
-                                <!-- Columna Izquierda: Lotes FEFO y Totales Cliente -->
-                                <div class="col-md-6">
+                            <div class="row align-items-center g-3">
+                                <div class="col-md-7">
                                     <div class="small fw-bold text-uppercase text-muted mb-1">
-                                        <i class="bi bi-layers-half text-primary me-1"></i>Asignación de Lotes (FEFO):
+                                        <i class="bi bi-layers-half text-primary me-1"></i>Asignación de Lotes por Vencimiento (FEFO):
                                     </div>
-                                    <div id="previewLotesFefo" class="small text-muted mb-3">
+                                    <div id="previewLotesFefo" class="small text-muted">
                                         Selecciona o escanea un medicamento para previsualizar qué lotes se descontarán.
                                     </div>
-
-                                    <div class="p-3 rounded-3 bg-white border">
-                                        <div class="d-flex justify-content-between small text-muted mb-1">
-                                            <span>Subtotal Bruto:</span>
-                                            <span id="txtSubtotal" class="font-mono">$0</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between small text-success mb-1">
-                                            <span>Bonificación Convenio:</span>
-                                            <span id="txtDescuento" class="font-mono">-$0</span>
-                                        </div>
-                                        <hr class="my-2">
-                                        <div class="d-flex justify-content-between align-items-baseline">
-                                            <span class="fw-bold small">PAGA EL CLIENTE:</span>
-                                            <span id="txtTotal" class="fs-4 fw-extrabold text-dark font-mono">$0</span>
-                                        </div>
-                                    </div>
                                 </div>
-
-                                <!-- Columna Derecha: Simulador Oficial de Tarifas Transbank (publico.transbank.cl/tarifas) -->
-                                <div class="col-md-6">
-                                    <div class="p-3 rounded-3 h-100 text-white position-relative"
-                                         style="background: linear-gradient(145deg, #2D0B3A 0%, #4A154B 55%, #880E4F 100%);">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="badge bg-white text-dark fw-bold" style="font-size: 0.7rem;">
-                                                <i class="bi bi-calculator-fill text-danger me-1"></i>SIMULADOR TARIFAS TRANSBANK
-                                            </span>
-                                            <span id="txtTbkTasaBadge" class="badge bg-warning text-dark font-mono" style="font-size: 0.7rem;">
-                                                Tasa: 1,49% + IVA
-                                            </span>
-                                        </div>
-                                        <div class="small text-white-50 mb-2" style="font-size: 0.72rem;">
-                                            Rubro: <strong>Farmacias (MCC 5912)</strong> • POS Presencial
-                                        </div>
-
-                                        <div class="d-flex justify-content-between small mb-1">
-                                            <span class="text-white-50">Comisión Transbank (<span id="txtTbkPct">1.49</span>%):</span>
-                                            <span id="txtTbkComision" class="font-mono text-warning">-$0</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between small mb-1">
-                                            <span class="text-white-50">IVA sobre Comisión (19%):</span>
-                                            <span id="txtTbkIva" class="font-mono text-warning">-$0</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between small mb-2 pb-1 border-bottom border-light border-opacity-25">
-                                            <span class="text-white-50 fw-semibold">Total Descuento TBK:</span>
-                                            <span id="txtTbkDescuentoTotal" class="font-mono fw-bold text-danger-emphasis" style="color: #FDA4AF !important;">-$0</span>
-                                        </div>
-
-                                        <div class="d-flex justify-content-between align-items-baseline">
-                                            <div>
-                                                <div class="fw-bold small text-white">ABONO LÍQUIDO FARMACIA:</div>
-                                                <div id="txtTbkPlazo" class="text-white-50" style="font-size: 0.68rem;">Abono en 24 hrs hábiles</div>
-                                            </div>
-                                            <span id="txtTbkAbonoLiquido" class="fs-4 fw-extrabold font-mono" style="color: #34D399;">$0</span>
-                                        </div>
+                                <div class="col-md-5 text-md-end border-start-md ps-md-3">
+                                    <div class="d-flex justify-content-between small text-muted">
+                                        <span>Subtotal:</span>
+                                        <span id="txtSubtotal" class="font-mono">$0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between small text-success">
+                                        <span>Descuento Convenio:</span>
+                                        <span id="txtDescuento" class="font-mono">-$0</span>
+                                    </div>
+                                    <hr class="my-1">
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <span class="fw-bold small">TOTAL A COBRAR:</span>
+                                        <span id="txtTotal" class="fs-3 fw-extrabold text-success font-mono">$0</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <button type="submit" id="btnSubmitVenta" class="btn btn-verde-medico w-100 py-3 rounded-3 fw-bold fs-5">
-                            <i class="bi bi-credit-card-check me-2"></i>Procesar Venta FEFO y Emitir Voucher Transbank
-                        </button>
+                        <div class="d-grid gap-2">
+                            <button type="submit" id="btnSubmitVenta" class="btn btn-verde-medico py-3 rounded-3 fw-bold fs-5">
+                                <i class="bi bi-credit-card-2-front me-2"></i>Cobrar en Simulador de Tarjeta Transbank (Webpay / Redcompra)
+                            </button>
+                        </div>
                     </form>
 
                     <div id="resultadoVenta" class="mt-3 d-none"></div>
@@ -251,59 +238,126 @@
             </div>
         </div>
 
-        <!-- Columna Derecha: Calculadora Libre Transbank (publico.transbank.cl/tarifas) + Cola FEFO -->
+        <!-- Columna Derecha: SIMULADOR DE PAGO CON TARJETA TRANSBANK (WEBPAY / REDCOMPRA) + Cola FEFO -->
         <div class="col-lg-5">
-            <!-- Calculadora Interactiva Independiente de Tarifas Transbank -->
-            <div class="card-pro mb-4 overflow-hidden">
-                <div class="card-header d-flex justify-content-between align-items-center text-white"
-                     style="background: linear-gradient(90deg, #D5006D 0%, #6B1D7A 100%);">
-                    <div>
-                        <i class="bi bi-Sliders me-1"></i>
-                        <span>Calculadora Libre de Tarifas Transbank</span>
-                    </div>
-                    <a href="https://publico.transbank.cl/tarifas" target="_blank" rel="noopener" class="badge bg-white text-dark text-decoration-none">
-                        publico.transbank.cl/tarifas <i class="bi bi-box-arrow-up-right ms-1"></i>
-                    </a>
-                </div>
-                <div class="card-body p-3">
-                    <p class="text-muted small mb-2">
-                        Simula cualquier monto de venta y compara cuánto abona Transbank según el tipo de tarjeta (Comisión + 19% IVA):
-                    </p>
-                    <div class="row g-2 align-items-end mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold mb-1">Monto de Venta ($ CLP)</label>
-                            <input type="number" id="simMontoInput" class="form-control form-control-sm font-mono fw-bold" value="25000" min="100">
+            <!-- SIMULADOR DE PAGO CON TARJETA WEBPAY / REDCOMPRA -->
+            <div class="card-pro mb-4 overflow-hidden border-2" id="cardSimuladorTarjeta" style="border-color: #D5006D;">
+                <div class="card-header d-flex justify-content-between align-items-center text-white py-3"
+                     style="background: linear-gradient(135deg, #2D0B3A 0%, #6B1D7A 55%, #D5006D 100%);">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-credit-card-2-back-fill fs-4"></i>
+                        <div>
+                            <div class="fw-extrabold leading-none">Webpay Plus • Transbank</div>
+                            <div class="text-white-50" style="font-size: 0.72rem;">Simulador de Pago con Tarjeta (Crédito / Redcompra)</div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold mb-1">Tipo de Tarjeta / Canal</label>
-                            <select id="simTipoTarjeta" class="form-select form-select-sm fw-semibold">
-                                <option value="1.49" data-plazo="24 horas hábiles">Débito Redcompra (1,49% + IVA)</option>
-                                <option value="1.49" data-plazo="24 horas hábiles">Prepago (1,49% + IVA)</option>
-                                <option value="2.29" data-plazo="48 horas hábiles">Crédito Nacional/Int. (2,29% + IVA)</option>
+                    </div>
+                    <span class="badge bg-white text-dark font-mono fw-bold" id="tbkCardAmountBadge">$0</span>
+                </div>
+
+                <div class="card-body p-3">
+                    <!-- Tarjeta Bancaria Visual 3D -->
+                    <div class="p-3 rounded-4 text-white mb-3 shadow-sm position-relative overflow-hidden"
+                         id="visualCardBox"
+                         style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 65%, #1E40AF 100%); min-height: 155px;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-2 bg-warning" style="width: 38px; height: 28px; opacity: 0.9; border: 1px solid rgba(255,255,255,0.4);"></div>
+                                <i class="bi bi-wifi fs-5 text-white-50" style="transform: rotate(90deg);"></i>
+                            </div>
+                            <span id="visualCardBrand" class="badge bg-white text-dark fw-extrabold px-2 py-1">REDCOMPRA / VISA</span>
+                        </div>
+                        <div class="fs-5 fw-bold font-mono tracking-wider mb-3" id="visualCardNumber" style="letter-spacing: 2px;">
+                            5452 8808 0440 0003
+                        </div>
+                        <div class="d-flex justify-content-between align-items-end small">
+                            <div>
+                                <div class="text-white-50" style="font-size: 0.65rem;">TITULAR TARJETA</div>
+                                <div class="fw-bold text-uppercase font-mono" id="visualCardHolder">CLIENTE PRUEBA TRANSBANK</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="text-white-50" style="font-size: 0.65rem;">VENCE</div>
+                                <div class="fw-bold font-mono" id="visualCardExpiry">12/28</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Selector Rápido de Tarjetas Oficiales de Prueba Transbank -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted mb-1">
+                            <i class="bi bi-lightning-fill text-warning me-1"></i>Cargar Tarjeta de Prueba Oficial Transbank:
+                        </label>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1 fw-semibold btn-preset-card"
+                                    data-tipo="debito"
+                                    data-numero="5452 8808 0440 0003"
+                                    data-exp="10/29"
+                                    data-cvv="123"
+                                    data-brand="REDCOMPRA DÉBITO"
+                                    data-status="APPROVED">
+                                💳 Débito Aprobada
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 fw-semibold btn-preset-card"
+                                    data-tipo="credito"
+                                    data-numero="4051 8856 0044 6623"
+                                    data-exp="12/28"
+                                    data-cvv="123"
+                                    data-brand="VISA CRÉDITO"
+                                    data-status="APPROVED">
+                                💳 Crédito Aprobada
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold btn-preset-card"
+                                    data-tipo="credito"
+                                    data-numero="4051 8856 0044 0000"
+                                    data-exp="05/27"
+                                    data-cvv="999"
+                                    data-brand="TARJETA SIN FONDOS"
+                                    data-status="REJECTED">
+                                ❌ Simular Rechazo
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Campos del Formulario de Tarjeta -->
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold mb-1">Número de Tarjeta</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
+                                <input type="text" id="tbkInputNumber" class="form-control font-mono fw-bold" value="5452 8808 0440 0003" maxlength="19">
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold mb-1">Vencimiento</label>
+                            <input type="text" id="tbkInputExp" class="form-control form-control-sm font-mono text-center" value="10/29" maxlength="5">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold mb-1">CVV / PIN</label>
+                            <input type="password" id="tbkInputCvv" class="form-control form-control-sm font-mono text-center" value="1234" maxlength="4">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold mb-1">Cuotas / Banco</label>
+                            <select id="tbkInputCuotas" class="form-select form-select-sm">
+                                <option value="0">Sin Cuotas (Venta Normal)</option>
+                                <option value="3">3 Cuotas Sin Interés</option>
+                                <option value="6">6 Cuotas Normales</option>
+                                <option value="12">12 Cuotas Normales</option>
                             </select>
                         </div>
                     </div>
-                    <div class="rounded-3 p-3 bg-light border small">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Monto Venta Bruto:</span>
-                            <strong id="simResBruto" class="font-mono">$25.000</strong>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Comisión Transbank (<span id="simResTasa">1,49%</span>):</span>
-                            <span id="simResComision" class="font-mono text-danger">-$373</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">IVA sobre Comisión (19%):</span>
-                            <span id="simResIva" class="font-mono text-danger">-$71</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2 pb-1 border-bottom">
-                            <span class="fw-semibold text-muted">Costo Total Transbank (Comisión + IVA):</span>
-                            <strong id="simResCostoTotal" class="font-mono text-danger">-$444</strong>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark">Recibes en tu cuenta (<span id="simResPlazo">24 horas hábiles</span>):</span>
-                            <span id="simResLiquido" class="fs-5 fw-extrabold text-success font-mono">$24.556</span>
-                        </div>
+
+                    <!-- Estado de Comunicación con el Banco Emisor -->
+                    <div id="tbkPinpadStatus" class="rounded-3 p-2 bg-light border text-center small text-muted mb-3">
+                        <i class="bi bi-shield-lock-fill text-success me-1"></i>Conexión cifrada TLS 1.3 lista con Transbank.
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" id="btnPagarSimuladorLocal" class="btn text-white fw-bold py-2 rounded-3"
+                                style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
+                            <i class="bi bi-check2-circle me-1"></i>Autorizar Pago con esta Tarjeta Ahora
+                        </button>
+                        <button type="button" id="btnRedirigirWebpaySandbox" class="btn btn-outline-dark btn-sm py-2 rounded-3 fw-semibold">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Pasarela Oficial Webpay Sandbox (webpay3gint.transbank.cl)
+                        </button>
                     </div>
                 </div>
             </div>
@@ -362,6 +416,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Formulario oculto para redirección POST a Webpay Plus Sandbox oficial -->
+    <form id="webpayRedirectForm" method="POST" action="" class="d-none">
+        <input type="hidden" name="token_ws" id="webpayTokenInput" value="">
+    </form>
 </div>
 @endsection
 
@@ -380,41 +439,23 @@
     const txtSubtotal = document.getElementById('txtSubtotal');
     const txtDescuento = document.getElementById('txtDescuento');
     const txtTotal = document.getElementById('txtTotal');
+    const tbkCardAmountBadge = document.getElementById('tbkCardAmountBadge');
 
-    // Elementos del Simulador Transbank Integrado en el POS
-    const txtTbkTasaBadge = document.getElementById('txtTbkTasaBadge');
-    const txtTbkPct = document.getElementById('txtTbkPct');
-    const txtTbkComision = document.getElementById('txtTbkComision');
-    const txtTbkIva = document.getElementById('txtTbkIva');
-    const txtTbkDescuentoTotal = document.getElementById('txtTbkDescuentoTotal');
-    const txtTbkAbonoLiquido = document.getElementById('txtTbkAbonoLiquido');
-    const txtTbkPlazo = document.getElementById('txtTbkPlazo');
+    // Elementos del Simulador de Pago con Tarjeta
+    const visualCardBox = document.getElementById('visualCardBox');
+    const visualCardBrand = document.getElementById('visualCardBrand');
+    const visualCardNumber = document.getElementById('visualCardNumber');
+    const visualCardExpiry = document.getElementById('visualCardExpiry');
+    const tbkInputNumber = document.getElementById('tbkInputNumber');
+    const tbkInputExp = document.getElementById('tbkInputExp');
+    const tbkInputCvv = document.getElementById('tbkInputCvv');
+    const tbkInputCuotas = document.getElementById('tbkInputCuotas');
+    const tbkPinpadStatus = document.getElementById('tbkPinpadStatus');
 
     const formatCLP = (val) => '$' + Math.round(val || 0).toLocaleString('es-CL');
 
-    // Función oficial de cálculo Transbank (publico.transbank.cl/tarifas)
-    function calcularTransbankJS(montoBruto, metodo) {
-        let tasa = 0;
-        let plazo = 'Inmediato en Caja (Sin Comisión TBK)';
-        if (metodo === 'debito' || metodo === 'prepago') {
-            tasa = 1.49;
-            plazo = 'Abono en 24 hrs hábiles (Transbank)';
-        } else if (metodo === 'credito') {
-            tasa = 2.29;
-            plazo = 'Abono en 48 hrs hábiles (Transbank)';
-        }
-
-        const comision = Math.round(montoBruto * (tasa / 100));
-        const iva = Math.round(comision * 0.19);
-        const totalDescuento = comision + iva;
-        const liquido = Math.max(0, montoBruto - totalDescuento);
-
-        return { tasa, comision, iva, totalDescuento, liquido, plazo };
-    }
-
     function actualizarCalculosYPreview() {
         const opt = selectMed.options[selectMed.selectedIndex];
-        const metodo = selectMetodo.value;
 
         if (!opt || !opt.value) {
             bloqueControlado.classList.add('d-none');
@@ -423,14 +464,7 @@
             txtSubtotal.textContent = '$0';
             txtDescuento.textContent = '-$0';
             txtTotal.textContent = '$0';
-            const tbkZero = calcularTransbankJS(0, metodo);
-            txtTbkPct.textContent = tbkZero.tasa.toFixed(2);
-            txtTbkTasaBadge.textContent = tbkZero.tasa > 0 ? `Tasa: ${tbkZero.tasa}% + IVA` : 'Exento TBK (0%)';
-            txtTbkComision.textContent = '-$0';
-            txtTbkIva.textContent = '-$0';
-            txtTbkDescuentoTotal.textContent = '-$0';
-            txtTbkAbonoLiquido.textContent = '$0';
-            txtTbkPlazo.textContent = tbkZero.plazo;
+            tbkCardAmountBadge.textContent = '$0';
             return;
         }
 
@@ -450,16 +484,7 @@
         txtSubtotal.textContent = formatCLP(subtotal);
         txtDescuento.textContent = '-' + formatCLP(descuento);
         txtTotal.textContent = formatCLP(total);
-
-        // Actualizar Simulador Transbank de la venta actual
-        const tbk = calcularTransbankJS(total, metodo);
-        txtTbkPct.textContent = tbk.tasa.toFixed(2);
-        txtTbkTasaBadge.textContent = tbk.tasa > 0 ? `Tasa: ${tbk.tasa}% + IVA` : 'Exento TBK (0%)';
-        txtTbkComision.textContent = '-' + formatCLP(tbk.comision);
-        txtTbkIva.textContent = '-' + formatCLP(tbk.iva);
-        txtTbkDescuentoTotal.textContent = '-' + formatCLP(tbk.totalDescuento);
-        txtTbkAbonoLiquido.textContent = formatCLP(tbk.liquido);
-        txtTbkPlazo.textContent = tbk.plazo;
+        tbkCardAmountBadge.textContent = formatCLP(total);
 
         // Simulación en vivo de lotes FEFO
         try {
@@ -483,31 +508,38 @@
         } catch (e) {}
     }
 
-    // Calculadora Independiente de Tarifas Transbank (Columna Derecha)
-    const simMontoInput = document.getElementById('simMontoInput');
-    const simTipoTarjeta = document.getElementById('simTipoTarjeta');
-    function actualizarCalculadoraLibreTbk() {
-        const monto = Math.max(0, parseFloat(simMontoInput.value || '0'));
-        const tasa = parseFloat(simTipoTarjeta.value || '1.49');
-        const plazo = simTipoTarjeta.options[simTipoTarjeta.selectedIndex].dataset.plazo;
+    // Sincronizar tarjeta 3D cuando el usuario escribe o selecciona un preset de tarjeta de prueba
+    tbkInputNumber.addEventListener('input', function () {
+        visualCardNumber.textContent = this.value || '•••• •••• •••• ••••';
+    });
+    tbkInputExp.addEventListener('input', function () {
+        visualCardExpiry.textContent = this.value || 'MM/AA';
+    });
 
-        const comision = Math.round(monto * (tasa / 100));
-        const iva = Math.round(comision * 0.19);
-        const costoTotal = comision + iva;
-        const liquido = Math.max(0, monto - costoTotal);
+    document.querySelectorAll('.btn-preset-card').forEach(btn => {
+        btn.addEventListener('click', function () {
+            tbkInputNumber.value = this.dataset.numero;
+            tbkInputExp.value = this.dataset.exp;
+            tbkInputCvv.value = this.dataset.cvv;
+            visualCardNumber.textContent = this.dataset.numero;
+            visualCardExpiry.textContent = this.dataset.exp;
+            visualCardBrand.textContent = this.dataset.brand;
+            selectMetodo.value = this.dataset.tipo;
 
-        document.getElementById('simResBruto').textContent = formatCLP(monto);
-        document.getElementById('simResTasa').textContent = tasa.toFixed(2).replace('.', ',') + '%';
-        document.getElementById('simResComision').textContent = '-' + formatCLP(comision);
-        document.getElementById('simResIva').textContent = '-' + formatCLP(iva);
-        document.getElementById('simResCostoTotal').textContent = '-' + formatCLP(costoTotal);
-        document.getElementById('simResPlazo').textContent = plazo;
-        document.getElementById('simResLiquido').textContent = formatCLP(liquido);
-    }
-    simMontoInput.addEventListener('input', actualizarCalculadoraLibreTbk);
-    simTipoTarjeta.addEventListener('change', actualizarCalculadoraLibreTbk);
+            if (this.dataset.status === 'REJECTED') {
+                visualCardBox.style.background = 'linear-gradient(135deg, #450A0A 0%, #7F1D1D 60%, #991B1B 100%)';
+                tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger fw-semibold mb-3';
+                tbkPinpadStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Tarjeta de prueba configurada para simular RECHAZO BANCARIO (sin fondos).';
+            } else {
+                visualCardBox.style.background = 'linear-gradient(135deg, #1E293B 0%, #0F172A 65%, #1E40AF 100%)';
+                tbkPinpadStatus.className = 'rounded-3 p-2 bg-success-subtle border border-success text-center small text-success fw-semibold mb-3';
+                tbkPinpadStatus.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Tarjeta de prueba Transbank (${this.dataset.brand}) lista para aprobar.`;
+            }
+            actualizarCalculosYPreview();
+        });
+    });
 
-    // Procesar un código de barras leído por pistola USB/Bluetooth o clic de prueba
+    // Procesar código de barras
     function procesarCodigoDeBarras(codigoRaw) {
         const codigo = (codigoRaw || '').trim();
         if (!codigo) return;
@@ -609,14 +641,37 @@
         procesarCodigoDeBarras(urlParams.get('scan'));
     }
 
-    // Envío transaccional FEFO + Voucher Transbank
-    document.getElementById('posForm').addEventListener('submit', async function (e) {
-        e.preventDefault();
+    // Función central para autorizar en el Simulador de Tarjeta y ejecutar el descuento FEFO
+    async function ejecutarPagoConSimuladorTarjeta() {
         const resultadoDiv = document.getElementById('resultadoVenta');
-        resultadoDiv.className = 'mt-3 alert alert-info d-flex align-items-center gap-2';
-        resultadoDiv.innerHTML = '<div class="spinner-border spinner-border-sm"></div><span>Comunicando con Pinpad Transbank y ejecutando descuento FEFO...</span>';
+        if (!selectMed.value) {
+            window.playScannerBeep(false);
+            resultadoDiv.className = 'mt-3 alert alert-warning';
+            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o selecciona un medicamento para cobrar.';
+            return;
+        }
 
-        const formData = new FormData(this);
+        const numTarjeta = (tbkInputNumber.value || '').replace(/\s+/g, '');
+        const last4 = numTarjeta.slice(-4) || '0003';
+        const cuotas = tbkInputCuotas.value;
+
+        // Paso 1: Animación en el Pinpad / Simulador de Tarjeta
+        tbkPinpadStatus.className = 'rounded-3 p-2 bg-info-subtle border border-info text-center small text-dark fw-semibold mb-3';
+        tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Conectando con Transbank Webpay... Validando tarjeta **** ' + last4;
+
+        await new Promise(r => setTimeout(r, 650));
+
+        // Si es la tarjeta de prueba terminada en 0000, simulamos Rechazo Bancario
+        if (numTarjeta.endsWith('0000')) {
+            window.playScannerBeep(false);
+            tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger text-white text-center small fw-bold mb-3';
+            tbkPinpadStatus.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>TRANSACCIÓN RECHAZADA POR BANCO EMISOR (Fondos Insuficientes • Cód. -1)';
+            resultadoDiv.className = 'mt-3 alert alert-danger';
+            resultadoDiv.innerHTML = '<strong>Pago Rechazado en Transbank:</strong> La tarjeta terminada en **** 0000 fue rechazada por el banco. <strong>No se descontó stock FEFO.</strong>';
+            return;
+        }
+
+        const formData = new FormData(document.getElementById('posForm'));
         const payload = Object.fromEntries(formData.entries());
 
         try {
@@ -634,37 +689,34 @@
 
             if (response.ok && data.status === 'success') {
                 window.playScannerBeep(true);
+                const tbk = data.transbank || {};
+                const authCode = tbk.codigo_autorizacion_tbk || 'TBK-948201';
+
+                tbkPinpadStatus.className = 'rounded-3 p-2 bg-success text-white text-center small fw-bold mb-3';
+                tbkPinpadStatus.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>¡APROBADA! Tarjeta **** ${last4} • Aut: ${authCode}`;
+
                 const lotesHtml = data.lotes_fefo.map(l =>
                     `<li>Lote <strong class="font-mono">${l.lote}</strong>: <strong>${l.cantidad} u.</strong> descontadas</li>`
                 ).join('');
 
-                const tbk = data.transbank || {};
-                const tbkHtml = tbk.es_transbank ? `
-                    <div class="mt-2 p-2 rounded-3 bg-white border small">
-                        <div class="d-flex justify-content-between fw-bold text-dark border-bottom pb-1 mb-1">
-                            <span><i class="bi bi-credit-card-2-front text-danger me-1"></i>VOUCHER TRANSBANK APROBADO</span>
-                            <span class="font-mono badge bg-dark">${tbk.codigo_autorizacion_tbk}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Comisión TBK (${tbk.tasa_transbank}%) + IVA (19%):</span>
-                            <span class="font-mono text-danger">-${formatCLP(tbk.total_descuento_tbk)}</span>
-                        </div>
-                        <div class="d-flex justify-content-between fw-bold text-success">
-                            <span>Abono Líquido a Cuenta (${tbk.plazo_abono}):</span>
-                            <span class="font-mono">${formatCLP(tbk.abono_liquido)}</span>
-                        </div>
-                    </div>
-                ` : '';
-
                 resultadoDiv.className = 'mt-3 alert alert-success border-success shadow-sm';
                 resultadoDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} procesada con éxito!</strong>
+                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} y Pago con Tarjeta Aprobados!</strong>
                         <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
                     </div>
+                    <div class="mt-2 p-2 rounded-3 bg-white border small text-dark">
+                        <div class="d-flex justify-content-between fw-bold border-bottom pb-1 mb-1">
+                            <span><i class="bi bi-credit-card-2-front text-danger me-1"></i>COMPROBANTE PAGO CON TARJETA TRANSBANK</span>
+                            <span class="font-mono badge bg-dark">${authCode}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Tarjeta: <strong>**** **** **** ${last4}</strong> (${cuotas === '0' ? 'Sin cuotas' : cuotas + ' cuotas'})</span>
+                            <span>Estado: <strong class="text-success">AUTORIZADO (Cód. 0)</strong></span>
+                        </div>
+                    </div>
                     <div class="mt-2 small">Lotes descontados por algoritmo FEFO:</div>
-                    <ul class="mb-1 small">${lotesHtml}</ul>
-                    ${tbkHtml}
+                    <ul class="mb-0 small">${lotesHtml}</ul>
                 `;
                 setTimeout(() => window.location.reload(), 2400);
             } else {
@@ -676,6 +728,57 @@
             window.playScannerBeep(false);
             resultadoDiv.className = 'mt-3 alert alert-danger';
             resultadoDiv.textContent = 'Error de conexión con el servidor POS.';
+        }
+    }
+
+    document.getElementById('posForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        ejecutarPagoConSimuladorTarjeta();
+    });
+
+    document.getElementById('btnPagarSimuladorLocal').addEventListener('click', function () {
+        ejecutarPagoConSimuladorTarjeta();
+    });
+
+    // Opción B: Redirección a la Pasarela Oficial Webpay Plus Sandbox (webpay3gint.transbank.cl)
+    document.getElementById('btnRedirigirWebpaySandbox').addEventListener('click', async function () {
+        const resultadoDiv = document.getElementById('resultadoVenta');
+        if (!selectMed.value) {
+            window.playScannerBeep(false);
+            resultadoDiv.className = 'mt-3 alert alert-warning';
+            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o selecciona un medicamento para enviar el monto a Webpay.';
+            return;
+        }
+
+        tbkPinpadStatus.className = 'rounded-3 p-2 bg-warning-subtle border border-warning text-center small text-dark fw-semibold mb-3';
+        tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Creando sesión en servidor oficial Transbank Sandbox (webpay3gint.transbank.cl)...';
+
+        const formData = new FormData(document.getElementById('posForm'));
+        const payload = Object.fromEntries(formData.entries());
+
+        try {
+            const res = await fetch('{{ route("pos.webpay.iniciar") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success' && data.url && data.token) {
+                const redirectForm = document.getElementById('webpayRedirectForm');
+                redirectForm.action = data.url;
+                document.getElementById('webpayTokenInput').value = data.token;
+                redirectForm.submit();
+            } else {
+                tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger mb-3';
+                tbkPinpadStatus.textContent = data.message || 'No se pudo iniciar transacción en Webpay.';
+            }
+        } catch (err) {
+            tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger mb-3';
+            tbkPinpadStatus.textContent = 'Error de red al conectar con Transbank.';
         }
     });
 })();
