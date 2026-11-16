@@ -523,9 +523,11 @@ class PosController extends Controller
 
                     $medicamento = Medicamento::findOrFail($medId);
 
-                    // Algoritmo FEFO: Selecciona el lote más próximo a vencer con stock
+                    // Algoritmo FEFO: Selecciona el lote más próximo a vencer con stock válido (excluyendo vencidos y bloqueados por Recall ISP)
                     $lotes = Lote::where('medicamento_id', $medId)
                         ->where('stock_vitrina', '>', 0)
+                        ->where('bloqueado_recall_isp', false)
+                        ->whereDate('fecha_vencimiento', '>=', today())
                         ->orderBy('fecha_vencimiento', 'asc')
                         ->lockForUpdate()
                         ->get();
@@ -577,7 +579,11 @@ class PosController extends Controller
 
                 $tbk = self::calcularTarifaTransbank($total, $metodoPago, $authCodeOverride);
 
+                $folioDte = 'DTE39-' . str_pad((string) (Venta::count() + 1040), 6, '0', STR_PAD_LEFT);
+
                 $venta = Venta::create([
+                    'tipo_dte' => $request->input('tipo_dte', 'BOLETA_ELECTRONICA_39'),
+                    'folio_dte_sii' => $folioDte,
                     'user_id' => auth()->id(),
                     'convenio_id' => $convenioId,
                     'rut_cliente' => $request->input('rut_cliente'),
@@ -647,6 +653,8 @@ class PosController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'venta_id' => $venta->id,
+                    'folio_dte_sii' => $venta->folio_dte_sii,
+                    'boleta_url' => route('operaciones.boleta', $venta->id),
                     'subtotal' => $subtotalGlobal,
                     'descuento' => $descuentoGlobal,
                     'total' => $total,

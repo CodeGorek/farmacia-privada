@@ -513,6 +513,8 @@
             'precio' => (float) $med->precio_unitario,
             'controlado' => (bool) $med->es_controlado,
             'receta' => (bool) $med->requiere_receta,
+            'bioequivalente' => (bool) $med->es_bioequivalente,
+            'cenabast' => (bool) $med->es_cenabast,
             'stock' => (int) $med->lotes->sum('stock_vitrina'),
             'lotes' => $med->lotes->map(fn($l) => [
                 'lote' => $l->numero_lote,
@@ -663,6 +665,36 @@
                 ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.68rem;">⚠️ CONTROLADO</span>`
                 : '';
 
+            const badgeBio = med.bioequivalente
+                ? `<span class="badge bg-warning text-dark border border-dark ms-1" style="font-size: 0.68rem;">💊 BIOEQUIVALENTE ISP</span>`
+                : '';
+
+            // Ley de Fármacos: Si el producto NO es bioequivalente (es de marca más caro), buscar alternativa bioequivalente del mismo principio activo
+            let alertaBioequivalenteHtml = '';
+            if (!med.bioequivalente) {
+                const alternativaBio = CATALOGO.find(m =>
+                    m.id !== med.id &&
+                    m.principio.toLowerCase() === med.principio.toLowerCase() &&
+                    m.bioequivalente &&
+                    m.precio < med.precio &&
+                    m.stock > 0
+                );
+                if (alternativaBio) {
+                    const ahorroUnit = med.precio - alternativaBio.precio;
+                    alertaBioequivalenteHtml = `
+                        <div class="mt-2 p-2 rounded-3 border border-warning bg-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-2 small">
+                            <div>
+                                <span class="badge bg-warning text-dark border border-dark fw-bold me-1">FRANJA AMARILLA ISP • LEY DE FÁRMACOS</span>
+                                Existe alternativa Bioequivalente: <strong>${alternativaBio.nombre}</strong> a <strong>${formatCLP(alternativaBio.precio)}</strong> (Ahorra ${formatCLP(ahorroUnit)}/u.)
+                            </div>
+                            <button type="button" class="btn btn-xs btn-dark fw-bold py-1 px-2 small btn-cambiar-bio" data-idx="${idx}" data-bio-id="${alternativaBio.id}">
+                                <i class="bi bi-arrow-left-right text-warning me-1"></i>Cambiar por Bioequivalente
+                            </button>
+                        </div>
+                    `;
+                }
+            }
+
             const subtotalColHtml = dctoLinea > 0
                 ? `<div class="text-decoration-line-through text-muted small font-mono">${formatCLP(subBruto)}</div>
                    <div class="font-mono fw-extrabold text-success">${formatCLP(subFinalLinea)}</div>`
@@ -671,12 +703,13 @@
             return `
                 <tr>
                     <td>
-                        <div class="fw-bold">${med.nombre} ${badgeCtrl}</div>
-                        <div class="text-muted small font-mono mb-1"><i class="bi bi-upc me-1"></i>${med.codigo} • Stock vitrina: ${med.stock} u.</div>
+                        <div class="fw-bold">${med.nombre} ${badgeBio} ${badgeCtrl}</div>
+                        <div class="text-muted small font-mono mb-1"><i class="bi bi-upc me-1"></i>${med.codigo} • Principio: ${med.principio} • Stock vitrina: ${med.stock} u.</div>
                         <div class="d-flex flex-wrap gap-1 align-items-center">
                             ${calcularBadgesLotesFefo(med, cant)}
                             ${badgeCoberturaHtml}
                         </div>
+                        ${alertaBioequivalenteHtml}
                     </td>
                     <td class="text-end font-mono fw-semibold">${formatCLP(med.precio)}</td>
                     <td class="text-center">
@@ -743,6 +776,19 @@
                 const i = parseInt(this.dataset.idx, 10);
                 carrito.splice(i, 1);
                 renderizarCarrito();
+            });
+        });
+
+        tbodyCarritoPos.querySelectorAll('.btn-cambiar-bio').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const i = parseInt(this.dataset.idx, 10);
+                const bioId = parseInt(this.dataset.bioId, 10);
+                const bioMed = CATALOGO.find(m => m.id === bioId);
+                if (bioMed) {
+                    window.playScannerBeep(true);
+                    carrito[i].med = bioMed;
+                    renderizarCarrito();
+                }
             });
         });
     }
@@ -1128,9 +1174,14 @@
 
                 resultadoDiv.className = 'mt-3 alert alert-success border-success shadow-sm';
                 resultadoDiv.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center">
-                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} Procesada! (Ahorro Convenio: ${formatCLP(data.descuento || 0)})</strong>
-                        <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} Emitida! Folio SII: <code class="font-mono">${data.folio_dte_sii || ''}</code></strong>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
+                            <a href="${data.boleta_url || '/operaciones'}" class="btn btn-sm btn-dark fw-bold">
+                                <i class="bi bi-printer-fill me-1"></i>Ver Boleta SII 80mm
+                            </a>
+                        </div>
                     </div>
                     <div class="mt-2 p-2 rounded-3 bg-white border small text-dark">
                         <div class="d-flex justify-content-between fw-bold border-bottom pb-1 mb-1">
@@ -1147,7 +1198,6 @@
                 `;
                 carrito = [];
                 renderizarCarrito();
-                setTimeout(() => window.location.reload(), 2600);
             } else {
                 window.playScannerBeep(false);
                 resultadoDiv.className = 'mt-3 alert alert-danger';

@@ -17,6 +17,10 @@ class Lote extends Model
         'fecha_elaboracion',
         'stock_vitrina',
         'stock_bodega',
+        'costo_unitario_compra',
+        'stock_cuarentena',
+        'bloqueado_recall_isp',
+        'motivo_bloqueo',
     ];
 
     protected $casts = [
@@ -24,6 +28,9 @@ class Lote extends Model
         'fecha_elaboracion' => 'date',
         'stock_vitrina' => 'integer',
         'stock_bodega' => 'integer',
+        'costo_unitario_compra' => 'decimal:2',
+        'stock_cuarentena' => 'integer',
+        'bloqueado_recall_isp' => 'boolean',
     ];
 
     public function medicamento(): BelongsTo

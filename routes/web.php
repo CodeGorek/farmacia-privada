@@ -6,6 +6,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\VisacionQfController;
 use App\Http\Controllers\AdminPersonalController;
+use App\Http\Controllers\OperacionesSanitariasController;
 
 // Rutas de Autenticación y Cambio Rápido de Rol (Vendedor / QF / Admin)
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -34,6 +35,19 @@ Route::prefix('visacion-qf')->name('visacion.')->group(function () {
     Route::get('/pendientes-json', [VisacionQfController::class, 'pendientesJson'])->name('pendientes.json');
     Route::post('/{solicitud}/aprobar', [VisacionQfController::class, 'aprobar'])->name('aprobar');
     Route::post('/{solicitud}/rechazar', [VisacionQfController::class, 'rechazar'])->name('rechazar');
+});
+
+// Módulo de Operaciones Sanitarias, Caja Z, Boleta Electrónica SII, CENABAST, Cadena de Frío y Recall ISP
+Route::prefix('operaciones')->name('operaciones.')->group(function () {
+    Route::get('/', [OperacionesSanitariasController::class, 'index'])->name('index');
+    Route::get('/boleta-sii/{venta}', [OperacionesSanitariasController::class, 'verBoletaSii'])->name('boleta');
+    Route::post('/venta/{venta}/anular-nc61', [OperacionesSanitariasController::class, 'anularVentaConNotaCredito'])->name('venta.anular');
+    Route::post('/caja/abrir', [OperacionesSanitariasController::class, 'abrirCaja'])->name('caja.abrir');
+    Route::post('/caja/{caja}/cerrar-z', [OperacionesSanitariasController::class, 'cerrarCajaZ'])->name('caja.cerrar');
+    Route::post('/temperatura', [OperacionesSanitariasController::class, 'storeTemperatura'])->name('temperatura.store');
+    Route::post('/lote/{lote}/recall-isp', [OperacionesSanitariasController::class, 'toggleRecallCuarentena'])->name('lote.recall');
+    Route::post('/ordenes-compra', [OperacionesSanitariasController::class, 'storeOrdenCompra'])->name('oc.store');
+    Route::post('/farmacovigilancia', [OperacionesSanitariasController::class, 'storeFarmacovigilancia'])->name('ram.store');
 });
 
 // Módulo de Administración de Personal, Turnos, Licencias y Reemplazos — Administrador

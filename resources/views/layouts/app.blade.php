@@ -296,6 +296,13 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
+                            <i class="bi bi-receipt-cutoff"></i>
+                            <span>Caja Z, SII & ISP</span>
+                            <span class="ms-auto badge bg-info text-dark rounded-pill" style="font-size: 0.65rem;">ERP</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
                             <i class="bi bi-people-fill"></i>
                             <span>Personal y Turnos</span>

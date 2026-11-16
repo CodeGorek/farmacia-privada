@@ -19,13 +19,23 @@ class Medicamento extends Model
         'precio_unitario',
         'requiere_receta',
         'es_controlado',
+        'es_bioequivalente',
+        'es_cenabast',
+        'precio_maximo_cenabast',
+        'costo_neto_referencia',
+        'requiere_cadena_frio',
         'stock_minimo',
     ];
 
     protected $casts = [
         'precio_unitario' => 'decimal:2',
+        'precio_maximo_cenabast' => 'decimal:2',
+        'costo_neto_referencia' => 'decimal:2',
         'requiere_receta' => 'boolean',
         'es_controlado' => 'boolean',
+        'es_bioequivalente' => 'boolean',
+        'es_cenabast' => 'boolean',
+        'requiere_cadena_frio' => 'boolean',
         'stock_minimo' => 'integer',
     ];
 

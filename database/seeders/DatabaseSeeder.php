@@ -14,6 +14,10 @@ use App\Models\LibroControlado;
 use App\Models\TurnoPersonal;
 use App\Models\AusenciaReemplazo;
 use App\Models\SolicitudVisacion;
+use App\Models\CajaTurno;
+use App\Models\BitacoraTemperatura;
+use App\Models\OrdenCompra;
+use App\Models\Farmacovigilancia;
 use App\Http\Controllers\PosController;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -28,9 +32,7 @@ class DatabaseSeeder extends Seeder
             ['nombre' => 'Administrador General', 'descripcion' => 'Gestión de cuentas, turnos, licencias y reemplazos', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        // =========================================================================
-        // 1. CUENTAS DE USUARIO (VENDEDOR, QUÍMICO FARMACÉUTICO Y ADMINISTRADOR)
-        // =========================================================================
+        // 1. CUENTAS DE USUARIO
         $vendedor = User::create([
             'rut' => '17.450.221-8',
             'name' => 'Camila Andrea Muñoz (Vendedora)',
@@ -91,9 +93,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('123456'),
         ]);
 
-        // =========================================================================
-        // 2. TURNOS DIURNOS Y TURNOS NOCTURNOS DE GUARDIA
-        // =========================================================================
+        // 2. TURNOS DIURNOS Y NOCTURNOS
         TurnoPersonal::create([
             'user_id' => $qfTitular->id,
             'tipo_turno' => 'DIURNO_MANANA',
@@ -127,9 +127,7 @@ class DatabaseSeeder extends Seeder
             'observaciones' => 'Turno Nocturno de Urgencia comunal SEREMI de Salud',
         ]);
 
-        // =========================================================================
-        // 3. LICENCIAS MÉDICAS, DÍAS LIBRES Y REEMPLAZOS CON FECHAS
-        // =========================================================================
+        // 3. LICENCIAS MÉDICAS, DÍAS LIBRES Y REEMPLAZOS
         AusenciaReemplazo::create([
             'user_id' => $vendedorLicencia->id,
             'reemplazante_id' => $vendedor->id,
@@ -150,9 +148,7 @@ class DatabaseSeeder extends Seeder
             'estado' => 'VIGENTE',
         ]);
 
-        // =========================================================================
-        // 4. CONVENIOS Y MEDICAMENTOS
-        // =========================================================================
+        // 4. CONVENIOS Y MEDICAMENTOS (CON BIOEQUIVALENCIA Y LEY CENABAST)
         $convAdulto = Convenio::create([
             'nombre' => 'Convenio Adulto Mayor / FONASA',
             'rut_institucion' => '69.000.100-1',
@@ -175,6 +171,11 @@ class DatabaseSeeder extends Seeder
             'precio_unitario' => 1990,
             'requiere_receta' => false,
             'es_controlado' => false,
+            'es_bioequivalente' => true,
+            'es_cenabast' => true,
+            'precio_maximo_cenabast' => 2200,
+            'costo_neto_referencia' => 890,
+            'requiere_cadena_frio' => false,
             'stock_minimo' => 20,
         ]);
 
@@ -185,6 +186,7 @@ class DatabaseSeeder extends Seeder
             'fecha_vencimiento' => now()->addDays(22)->format('Y-m-d'),
             'stock_vitrina' => 14,
             'stock_bodega' => 40,
+            'costo_unitario_compra' => 890,
         ]);
 
         $lotePar27 = Lote::create([
@@ -194,6 +196,7 @@ class DatabaseSeeder extends Seeder
             'fecha_vencimiento' => now()->addMonths(8)->format('Y-m-d'),
             'stock_vitrina' => 25,
             'stock_bodega' => 80,
+            'costo_unitario_compra' => 890,
         ]);
 
         $clonazepam = Medicamento::create([
@@ -204,6 +207,10 @@ class DatabaseSeeder extends Seeder
             'precio_unitario' => 6490,
             'requiere_receta' => true,
             'es_controlado' => true,
+            'es_bioequivalente' => true,
+            'es_cenabast' => false,
+            'costo_neto_referencia' => 2900,
+            'requiere_cadena_frio' => false,
             'stock_minimo' => 10,
         ]);
 
@@ -214,6 +221,7 @@ class DatabaseSeeder extends Seeder
             'fecha_vencimiento' => now()->addDays(58)->format('Y-m-d'),
             'stock_vitrina' => 15,
             'stock_bodega' => 50,
+            'costo_unitario_compra' => 2900,
         ]);
 
         $amoxicilina = Medicamento::create([
@@ -224,6 +232,10 @@ class DatabaseSeeder extends Seeder
             'precio_unitario' => 4290,
             'requiere_receta' => true,
             'es_controlado' => false,
+            'es_bioequivalente' => true,
+            'es_cenabast' => false,
+            'costo_neto_referencia' => 1850,
+            'requiere_cadena_frio' => false,
             'stock_minimo' => 15,
         ]);
 
@@ -234,38 +246,72 @@ class DatabaseSeeder extends Seeder
             'fecha_vencimiento' => now()->addDays(18)->format('Y-m-d'),
             'stock_vitrina' => 8,
             'stock_bodega' => 30,
+            'costo_unitario_compra' => 1850,
         ]);
 
-        $losartan = Medicamento::create([
+        $losartanBio = Medicamento::create([
             'codigo_barra' => '780123456004',
-            'nombre_comercial' => 'Losartán Potásico 50mg Caja x30 (Bioequivalente)',
-            'principio_activo' => 'Losartán',
-            'laboratorio' => 'Bagó',
+            'nombre_comercial' => 'Losartán Potásico 50mg Caja x30 (Bioequivalente CENABAST)',
+            'principio_activo' => 'Losartán 50mg',
+            'laboratorio' => 'Bagó / CENABAST',
             'precio_unitario' => 5490,
             'requiere_receta' => true,
             'es_controlado' => false,
+            'es_bioequivalente' => true,
+            'es_cenabast' => true,
+            'precio_maximo_cenabast' => 5990,
+            'costo_neto_referencia' => 2100,
+            'requiere_cadena_frio' => false,
             'stock_minimo' => 25,
         ]);
 
         $loteLos = Lote::create([
-            'medicamento_id' => $losartan->id,
+            'medicamento_id' => $losartanBio->id,
             'numero_lote' => 'LOT-LOS-2028A',
             'fecha_elaboracion' => '2025-08-01',
             'fecha_vencimiento' => now()->addMonths(16)->format('Y-m-d'),
             'stock_vitrina' => 42,
             'stock_bodega' => 120,
+            'costo_unitario_compra' => 2100,
+        ]);
+
+        // Medicamento Referente de Marca (más caro) para demostrar el Comparador Automático de Bioequivalencia (Ley de Fármacos)
+        $losartanMarca = Medicamento::create([
+            'codigo_barra' => '780123456005',
+            'nombre_comercial' => 'Cozaar (Losartán de Marca) 50mg Caja x30',
+            'principio_activo' => 'Losartán 50mg',
+            'laboratorio' => 'MSD Internacional',
+            'precio_unitario' => 14990,
+            'requiere_receta' => true,
+            'es_controlado' => false,
+            'es_bioequivalente' => false,
+            'es_cenabast' => false,
+            'costo_neto_referencia' => 8900,
+            'requiere_cadena_frio' => false,
+            'stock_minimo' => 10,
+        ]);
+
+        Lote::create([
+            'medicamento_id' => $losartanMarca->id,
+            'numero_lote' => 'LOT-COZ-2028M',
+            'fecha_elaboracion' => '2025-09-01',
+            'fecha_vencimiento' => now()->addMonths(18)->format('Y-m-d'),
+            'stock_vitrina' => 12,
+            'stock_bodega' => 20,
+            'costo_unitario_compra' => 8900,
         ]);
 
         // Vademécum por Convenio
         $convIsapre->medicamentos()->attach([
             $clonazepam->id => ['porcentaje_descuento' => 25.00],
             $amoxicilina->id => ['porcentaje_descuento' => 20.00],
-            $losartan->id => ['porcentaje_descuento' => 20.00],
+            $losartanBio->id => ['porcentaje_descuento' => 20.00],
+            $losartanMarca->id => ['porcentaje_descuento' => 20.00],
         ]);
 
         $convAdulto->medicamentos()->attach([
             $paracetamol->id => ['porcentaje_descuento' => 15.00],
-            $losartan->id => ['porcentaje_descuento' => 30.00],
+            $losartanBio->id => ['porcentaje_descuento' => 30.00],
         ]);
 
         // Padrón de Afiliados por RUT
@@ -290,9 +336,7 @@ class DatabaseSeeder extends Seeder
             'estado' => 'SUSPENDIDO_MORA',
         ]);
 
-        // =========================================================================
         // 5. SOLICITUD DE VISACIÓN PENDIENTE EN LA BANDEJA DEL QUÍMICO FARMACÉUTICO
-        // =========================================================================
         SolicitudVisacion::create([
             'vendedor_id' => $vendedor->id,
             'qf_id' => null,
@@ -318,9 +362,62 @@ class DatabaseSeeder extends Seeder
             'monto_total' => 9735,
         ]);
 
-        // Ventas iniciales
+        // 6. APERTURA DE CAJA DE TURNO, TEMPERATURA DS 466, ÓRDENES DE COMPRA CENABAST Y FARMACOVIGILANCIA
+        CajaTurno::create([
+            'user_id' => $vendedor->id,
+            'estado' => 'ABIERTA',
+            'fondo_fijo_inicial' => 50000,
+            'apertura_at' => now()->subHours(3),
+            'observaciones' => 'Apertura de Turno Mañana Caja #1',
+        ]);
+
+        BitacoraTemperatura::create([
+            'user_id' => $qfTitular->id,
+            'jornada' => 'MANANA_09H',
+            'temp_sala' => 21.4,
+            'humedad_sala' => 48,
+            'temp_refrigerador' => 4.2,
+            'conforme_isp' => true,
+            'observaciones' => 'Control matinal conforme DS 466 MINSAL',
+        ]);
+
+        OrdenCompra::create([
+            'folio_oc' => 'OC-CENA-4810',
+            'proveedor' => 'CENABAST (Ley 21.198)',
+            'medicamento_id' => $losartanBio->id,
+            'cantidad_solicitada' => 150,
+            'costo_unitario_neto' => 2100,
+            'total_neto' => 315000,
+            'estado' => 'RECEPCIONADA',
+        ]);
+
+        OrdenCompra::create([
+            'folio_oc' => 'OC-SOCO-4811',
+            'proveedor' => 'Droguería Socofar',
+            'medicamento_id' => $amoxicilina->id,
+            'cantidad_solicitada' => 80,
+            'costo_unitario_neto' => 1850,
+            'total_neto' => 148000,
+            'estado' => 'EMITIDA',
+        ]);
+
+        Farmacovigilancia::create([
+            'user_id' => $qfTitular->id,
+            'tipo_registro' => 'RAM_ISP',
+            'rut_paciente' => '12.345.678-5',
+            'nombre_paciente' => 'María Alejandra González',
+            'medicamento_id' => $amoxicilina->id,
+            'numero_lote' => 'LOT-AMX-2026C',
+            'descripcion_clinica' => 'Rash cutáneo leve reportado a las 48h de iniciado el tratamiento antibiótico.',
+            'severidad' => 'LEVE',
+            'estado_reporte' => 'REPORTADO_RED_RAM_ISP',
+        ]);
+
+        // Ventas iniciales con Folio DTE SII
         $tbk1 = PosController::calcularTarifaTransbank(23880, 'efectivo');
         $v1 = Venta::create([
+            'tipo_dte' => 'BOLETA_ELECTRONICA_39',
+            'folio_dte_sii' => 'DTE39-001041',
             'user_id' => $vendedor->id,
             'convenio_id' => null,
             'rut_cliente' => null,
@@ -347,6 +444,8 @@ class DatabaseSeeder extends Seeder
 
         $tbk2 = PosController::calcularTarifaTransbank(9735, 'debito');
         $v2 = Venta::create([
+            'tipo_dte' => 'BOLETA_ELECTRONICA_39',
+            'folio_dte_sii' => 'DTE39-001042',
             'user_id' => $vendedor->id,
             'convenio_id' => $convIsapre->id,
             'rut_cliente' => '12.345.678-5',
@@ -384,6 +483,8 @@ class DatabaseSeeder extends Seeder
 
         $tbk3 = PosController::calcularTarifaTransbank(11529, 'credito');
         $v3 = Venta::create([
+            'tipo_dte' => 'BOLETA_ELECTRONICA_39',
+            'folio_dte_sii' => 'DTE39-001043',
             'user_id' => $vendedor->id,
             'convenio_id' => $convAdulto->id,
             'rut_cliente' => '9.876.543-3',
@@ -400,7 +501,7 @@ class DatabaseSeeder extends Seeder
         ]);
         DetalleVenta::create([
             'venta_id' => $v3->id,
-            'medicamento_id' => $losartan->id,
+            'medicamento_id' => $losartanBio->id,
             'lote_id' => $loteLos->id,
             'numero_lote' => $loteLos->numero_lote,
             'cantidad' => 3,

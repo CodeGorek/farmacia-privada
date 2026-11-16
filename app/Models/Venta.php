@@ -12,6 +12,8 @@ class Venta extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tipo_dte',
+        'folio_dte_sii',
         'user_id',
         'convenio_id',
         'rut_cliente',
@@ -25,6 +27,7 @@ class Venta extends Model
         'abono_liquido',
         'codigo_autorizacion_tbk',
         'estado',
+        'anulada',
     ];
 
     protected $casts = [
@@ -35,7 +38,13 @@ class Venta extends Model
         'comision_transbank' => 'decimal:2',
         'iva_comision' => 'decimal:2',
         'abono_liquido' => 'decimal:2',
+        'anulada' => 'boolean',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function convenio(): BelongsTo
     {
