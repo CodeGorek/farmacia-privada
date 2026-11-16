@@ -9,6 +9,7 @@ use App\Models\Lote;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
 use App\Models\LibroControlado;
+use App\Http\Controllers\PosController;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -50,7 +51,7 @@ class DatabaseSeeder extends Seeder
             'medicamento_id' => $paracetamol->id,
             'numero_lote' => 'LOT-PAR-2026A',
             'fecha_elaboracion' => '2025-01-10',
-            'fecha_vencimiento' => now()->addDays(22)->format('Y-m-d'), // Crítico <= 30d
+            'fecha_vencimiento' => now()->addDays(22)->format('Y-m-d'),
             'stock_vitrina' => 14,
             'stock_bodega' => 40,
         ]);
@@ -79,7 +80,7 @@ class DatabaseSeeder extends Seeder
             'medicamento_id' => $clonazepam->id,
             'numero_lote' => 'LOT-CLO-2027A',
             'fecha_elaboracion' => '2025-03-15',
-            'fecha_vencimiento' => now()->addDays(58)->format('Y-m-d'), // Próximo 31-90d
+            'fecha_vencimiento' => now()->addDays(58)->format('Y-m-d'),
             'stock_vitrina' => 15,
             'stock_bodega' => 50,
         ]);
@@ -99,7 +100,7 @@ class DatabaseSeeder extends Seeder
             'medicamento_id' => $amoxicilina->id,
             'numero_lote' => 'LOT-AMX-2026C',
             'fecha_elaboracion' => '2025-04-10',
-            'fecha_vencimiento' => now()->addDays(18)->format('Y-m-d'), // Crítico <= 30d
+            'fecha_vencimiento' => now()->addDays(18)->format('Y-m-d'),
             'stock_vitrina' => 8,
             'stock_bodega' => 30,
         ]);
@@ -119,18 +120,24 @@ class DatabaseSeeder extends Seeder
             'medicamento_id' => $losartan->id,
             'numero_lote' => 'LOT-LOS-2028A',
             'fecha_elaboracion' => '2025-08-01',
-            'fecha_vencimiento' => now()->addMonths(16)->format('Y-m-d'), // Óptimo > 90d
+            'fecha_vencimiento' => now()->addMonths(16)->format('Y-m-d'),
             'stock_vitrina' => 42,
             'stock_bodega' => 120,
         ]);
 
-        // Ventas iniciales de ejemplo para gráficas en tiempo real
+        // Ventas iniciales con cálculo oficial de tarifas Transbank
+        $tbk1 = PosController::calcularTarifaTransbank(23880, 'efectivo');
         $v1 = Venta::create([
             'convenio_id' => null,
             'subtotal' => 23880,
             'descuento' => 0,
             'total' => 23880,
             'metodo_pago' => 'efectivo',
+            'tasa_transbank' => $tbk1['tasa_transbank'],
+            'comision_transbank' => $tbk1['comision_transbank'],
+            'iva_comision' => $tbk1['iva_comision'],
+            'abono_liquido' => $tbk1['abono_liquido'],
+            'codigo_autorizacion_tbk' => $tbk1['codigo_autorizacion_tbk'],
             'estado' => 'completada',
         ]);
         DetalleVenta::create([
@@ -143,12 +150,18 @@ class DatabaseSeeder extends Seeder
             'subtotal' => 23880,
         ]);
 
+        $tbk2 = PosController::calcularTarifaTransbank(10384, 'debito');
         $v2 = Venta::create([
             'convenio_id' => $convIsapre->id,
             'subtotal' => 12980,
             'descuento' => 2596,
             'total' => 10384,
             'metodo_pago' => 'debito',
+            'tasa_transbank' => $tbk2['tasa_transbank'],
+            'comision_transbank' => $tbk2['comision_transbank'],
+            'iva_comision' => $tbk2['iva_comision'],
+            'abono_liquido' => $tbk2['abono_liquido'],
+            'codigo_autorizacion_tbk' => $tbk2['codigo_autorizacion_tbk'],
             'estado' => 'completada',
         ]);
         DetalleVenta::create([
@@ -172,12 +185,18 @@ class DatabaseSeeder extends Seeder
             'cantidad_dispensada' => 2,
         ]);
 
+        $tbk3 = PosController::calcularTarifaTransbank(14000, 'credito');
         $v3 = Venta::create([
             'convenio_id' => $convAdulto->id,
             'subtotal' => 16470,
             'descuento' => 2470,
             'total' => 14000,
             'metodo_pago' => 'credito',
+            'tasa_transbank' => $tbk3['tasa_transbank'],
+            'comision_transbank' => $tbk3['comision_transbank'],
+            'iva_comision' => $tbk3['iva_comision'],
+            'abono_liquido' => $tbk3['abono_liquido'],
+            'codigo_autorizacion_tbk' => $tbk3['codigo_autorizacion_tbk'],
             'estado' => 'completada',
         ]);
         DetalleVenta::create([

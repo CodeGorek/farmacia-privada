@@ -96,14 +96,14 @@
         <div class="col-sm-6 col-xl-2">
             <div class="kpi-card p-3 h-100">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Ahorro Convenios</span>
-                    <div class="kpi-icon bg-purple-subtle text-primary" style="width: 38px; height: 38px; font-size: 1.1rem; background: #EDE9FE;">
-                        <i class="bi bi-heart-pulse"></i>
+                    <span class="text-muted small fw-bold text-uppercase" style="font-size: 0.7rem;">Abono Líquido TBK</span>
+                    <div class="kpi-icon text-white" style="width: 38px; height: 38px; font-size: 1.1rem; background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
+                        <i class="bi bi-credit-card-2-front"></i>
                     </div>
                 </div>
-                <h4 class="fw-extrabold text-primary mb-1 font-mono" id="kpiDescuentosHoy">${{ number_format($descuentosHoy, 0, ',', '.') }}</h4>
-                <div class="text-muted" style="font-size: 0.75rem;">
-                    Bonificación Isapre / Adulto Mayor
+                <h4 class="fw-extrabold text-dark mb-1 font-mono" id="kpiAbonoLiquido">${{ number_format($abonoLiquidoHoy, 0, ',', '.') }}</h4>
+                <div class="text-muted" style="font-size: 0.73rem;">
+                    Comisión+IVA TBK: <span class="fw-bold text-danger font-mono" id="kpiCostoTbk">-${{ number_format($costoTotalTbkHoy, 0, ',', '.') }}</span>
                 </div>
             </div>
         </div>
@@ -549,7 +549,10 @@
             document.getElementById('kpiStockBodega').textContent = data.kpis.stockBodegaTotal.toLocaleString('es-CL');
             document.getElementById('kpiValorInventario').textContent = formatCLP(data.kpis.valorInventario);
             document.getElementById('kpiTotalMedicamentos').textContent = data.kpis.totalMedicamentos;
-            document.getElementById('kpiDescuentosHoy').textContent = formatCLP(data.kpis.descuentosHoy);
+            if (document.getElementById('kpiAbonoLiquido')) {
+                document.getElementById('kpiAbonoLiquido').textContent = formatCLP(data.kpis.abonoLiquidoHoy);
+                document.getElementById('kpiCostoTbk').textContent = '-' + formatCLP(data.kpis.costoTotalTbkHoy);
+            }
             document.getElementById('kpiAlertasCount').textContent = data.kpis.alertasCount;
             document.getElementById('kpiCriticosCount').textContent = data.semaforo.critico;
             document.getElementById('kpiControlados').textContent = data.kpis.totalControlados;

@@ -18,6 +18,11 @@ class Venta extends Model
         'descuento',
         'total',
         'metodo_pago',
+        'tasa_transbank',
+        'comision_transbank',
+        'iva_comision',
+        'abono_liquido',
+        'codigo_autorizacion_tbk',
         'estado',
     ];
 
@@ -25,6 +30,10 @@ class Venta extends Model
         'subtotal' => 'decimal:2',
         'descuento' => 'decimal:2',
         'total' => 'decimal:2',
+        'tasa_transbank' => 'decimal:2',
+        'comision_transbank' => 'decimal:2',
+        'iva_comision' => 'decimal:2',
+        'abono_liquido' => 'decimal:2',
     ];
 
     public function convenio(): BelongsTo

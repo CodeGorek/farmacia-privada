@@ -15,6 +15,48 @@ use Illuminate\Support\Facades\Log;
 
 class PosController extends Controller
 {
+    /**
+     * Motor de cálculo oficial del Simulador de Tarifas Transbank (https://publico.transbank.cl/tarifas)
+     * Rubro: Farmacias y Perfumerías (MCC 5912)
+     * - Débito / Prepago (Redcompra): 1.49% + 19% IVA sobre comisión
+     * - Crédito Nacional / Internacional: 2.29% + 19% IVA sobre comisión
+     */
+    public static function calcularTarifaTransbank(float $montoBruto, string $metodoPago): array
+    {
+        $metodo = strtolower(trim($metodoPago));
+        $tasa = 0.0;
+        $plazoAbono = 'Inmediato en Caja';
+
+        if (in_array($metodo, ['debito', 'prepago'], true)) {
+            $tasa = 1.49;
+            $plazoAbono = '24 hrs hábiles (Transbank)';
+        } elseif ($metodo === 'credito') {
+            $tasa = 2.29;
+            $plazoAbono = '48 hrs hábiles (Transbank)';
+        }
+
+        $comisionNeta = round($montoBruto * ($tasa / 100));
+        $ivaComision = round($comisionNeta * 0.19);
+        $totalDescuentoTbk = $comisionNeta + $ivaComision;
+        $abonoLiquido = max(0, $montoBruto - $totalDescuentoTbk);
+
+        $esTransbank = $tasa > 0;
+        $codigoAutorizacion = $esTransbank
+            ? 'TBK-' . strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 6))
+            : null;
+
+        return [
+            'es_transbank' => $esTransbank,
+            'tasa_transbank' => $tasa,
+            'comision_transbank' => $comisionNeta,
+            'iva_comision' => $ivaComision,
+            'total_descuento_tbk' => $totalDescuentoTbk,
+            'abono_liquido' => $abonoLiquido,
+            'plazo_abono' => $plazoAbono,
+            'codigo_autorizacion_tbk' => $codigoAutorizacion,
+        ];
+    }
+
     private function buildDashboardPayload(): array
     {
         $medicamentos = Medicamento::with(['lotes' => function ($q) {
@@ -27,14 +69,12 @@ class PosController extends Controller
         $stockVitrinaTotal = (int) $lotes->sum('stock_vitrina');
         $stockBodegaTotal = (int) $lotes->sum('stock_bodega');
 
-        // Valorización del inventario (Vitrina + Bodega)
         $valorInventario = 0;
         foreach ($medicamentos as $med) {
             $unidadesMed = $med->lotes->sum('stock_vitrina') + $med->lotes->sum('stock_bodega');
             $valorInventario += $unidadesMed * (float) $med->precio_unitario;
         }
 
-        // Semáforo FEFO de lotes con stock
         $semaforoCritico = 0;   // <= 30 días
         $semaforoProximo = 0;   // 31 a 90 días
         $semaforoOptimo = 0;    // > 90 días
@@ -54,16 +94,20 @@ class PosController extends Controller
             return $lote->stock_vitrina > 0 && $lote->fecha_vencimiento <= now()->addDays(90);
         })->values();
 
-        // Métricas de ventas del día
+        // Métricas de ventas del día y conciliación Transbank
         $ventasHoyQuery = Venta::whereDate('created_at', today());
         $ventasHoy = (float) (clone $ventasHoyQuery)->sum('total');
         $descuentosHoy = (float) (clone $ventasHoyQuery)->sum('descuento');
         $cantidadVentasHoy = (int) (clone $ventasHoyQuery)->count();
         $ticketPromedio = $cantidadVentasHoy > 0 ? round($ventasHoy / $cantidadVentasHoy) : 0;
 
+        $comisionTbkHoy = (float) (clone $ventasHoyQuery)->sum('comision_transbank');
+        $ivaTbkHoy = (float) (clone $ventasHoyQuery)->sum('iva_comision');
+        $costoTotalTbkHoy = $comisionTbkHoy + $ivaTbkHoy;
+        $abonoLiquidoHoy = (float) (clone $ventasHoyQuery)->sum('abono_liquido');
+
         $totalControlados = LibroControlado::count();
 
-        // Ventas por método de pago
         $porMetodo = Venta::select('metodo_pago', DB::raw('SUM(total) as monto'), DB::raw('COUNT(*) as cantidad'))
             ->groupBy('metodo_pago')
             ->get()
@@ -72,17 +116,16 @@ class PosController extends Controller
         $metodosPagoData = [
             'efectivo' => (float) ($porMetodo['efectivo']->monto ?? 0),
             'debito' => (float) ($porMetodo['debito']->monto ?? 0),
+            'prepago' => (float) ($porMetodo['prepago']->monto ?? 0),
             'credito' => (float) ($porMetodo['credito']->monto ?? 0),
             'transferencia' => (float) ($porMetodo['transferencia']->monto ?? 0),
         ];
 
-        // Últimas 10 ventas para el gráfico de tendencia en tiempo real y tabla
         $ultimasVentas = Venta::with(['detalles.medicamento', 'convenio'])
             ->latest()
             ->take(10)
             ->get();
 
-        // Estado de medicamentos para matriz ejecutiva
         $estadoCatalogo = $medicamentos->map(function ($med) {
             $vitrina = (int) $med->lotes->sum('stock_vitrina');
             $bodega = (int) $med->lotes->sum('stock_bodega');
@@ -121,6 +164,10 @@ class PosController extends Controller
             'descuentosHoy' => $descuentosHoy,
             'cantidadVentasHoy' => $cantidadVentasHoy,
             'ticketPromedio' => $ticketPromedio,
+            'comisionTbkHoy' => $comisionTbkHoy,
+            'ivaTbkHoy' => $ivaTbkHoy,
+            'costoTotalTbkHoy' => $costoTotalTbkHoy,
+            'abonoLiquidoHoy' => $abonoLiquidoHoy,
             'totalControlados' => $totalControlados,
             'metodosPagoData' => $metodosPagoData,
             'ultimasVentas' => $ultimasVentas,
@@ -151,6 +198,10 @@ class PosController extends Controller
                 'descuentosHoy' => $data['descuentosHoy'],
                 'cantidadVentasHoy' => $data['cantidadVentasHoy'],
                 'ticketPromedio' => $data['ticketPromedio'],
+                'comisionTbkHoy' => $data['comisionTbkHoy'],
+                'ivaTbkHoy' => $data['ivaTbkHoy'],
+                'costoTotalTbkHoy' => $data['costoTotalTbkHoy'],
+                'abonoLiquidoHoy' => $data['abonoLiquidoHoy'],
                 'alertasCount' => $data['lotesPorVencer']->count(),
                 'totalControlados' => $data['totalControlados'],
             ],
@@ -167,6 +218,10 @@ class PosController extends Controller
                     'subtotal' => (float) $v->subtotal,
                     'descuento' => (float) $v->descuento,
                     'total' => (float) $v->total,
+                    'tasa_transbank' => (float) $v->tasa_transbank,
+                    'costo_tbk' => (float) ($v->comision_transbank + $v->iva_comision),
+                    'abono_liquido' => (float) $v->abono_liquido,
+                    'codigo_autorizacion_tbk' => $v->codigo_autorizacion_tbk,
                     'detalles' => $v->detalles->map(fn($d) => [
                         'medicamento' => $d->medicamento->nombre_comercial ?? 'Producto',
                         'lote' => $d->numero_lote,
@@ -250,6 +305,10 @@ class PosController extends Controller
                 }
 
                 $total = max(0, $subtotal - $descuento);
+                $metodoPago = $request->input('metodo_pago', 'efectivo');
+
+                // Simulación de tarifas y abono Transbank (publico.transbank.cl/tarifas)
+                $tbk = self::calcularTarifaTransbank($total, $metodoPago);
 
                 // Registro de la venta en la tabla 'ventas'
                 $venta = Venta::create([
@@ -258,7 +317,12 @@ class PosController extends Controller
                     'subtotal' => $subtotal,
                     'descuento' => $descuento,
                     'total' => $total,
-                    'metodo_pago' => $request->input('metodo_pago', 'efectivo'),
+                    'metodo_pago' => $metodoPago,
+                    'tasa_transbank' => $tbk['tasa_transbank'],
+                    'comision_transbank' => $tbk['comision_transbank'],
+                    'iva_comision' => $tbk['iva_comision'],
+                    'abono_liquido' => $tbk['abono_liquido'],
+                    'codigo_autorizacion_tbk' => $tbk['codigo_autorizacion_tbk'],
                     'estado' => 'completada',
                 ]);
 
@@ -288,11 +352,10 @@ class PosController extends Controller
                     }
                 }
 
-                // Registro de auditoría en MongoDB (tolerante a fallos si el demonio local no está activo)
                 try {
                     if (extension_loaded('mongodb')) {
                         AuditLog::create([
-                            'evento' => 'VENTA_PROCESADA_FEFO',
+                            'evento' => 'VENTA_PROCESADA_FEFO_TBK',
                             'entidad' => 'Venta',
                             'entidad_id' => $venta->id,
                             'usuario_id' => auth()->id(),
@@ -302,6 +365,7 @@ class PosController extends Controller
                                 'nombre_comercial' => $medicamento->nombre_comercial,
                                 'cantidad_total' => (int) $request->cantidad,
                                 'total' => $total,
+                                'transbank' => $tbk,
                                 'lotes_fefo' => $lotesAplicados,
                             ],
                             'fecha_evento' => now()->toIso8601String(),
@@ -315,6 +379,7 @@ class PosController extends Controller
                     'status' => 'success',
                     'venta_id' => $venta->id,
                     'total' => $total,
+                    'transbank' => $tbk,
                     'lotes_fefo' => $lotesAplicados,
                 ]);
             });

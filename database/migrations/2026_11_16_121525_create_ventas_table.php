@@ -14,6 +14,12 @@ return new class extends Migration {
             $table->decimal('descuento', 12, 2)->default(0);
             $table->decimal('total', 12, 2)->default(0);
             $table->string('metodo_pago', 40)->default('efectivo');
+            // Campos de simulación y conciliación Transbank (publico.transbank.cl/tarifas)
+            $table->decimal('tasa_transbank', 5, 2)->default(0);
+            $table->decimal('comision_transbank', 12, 2)->default(0);
+            $table->decimal('iva_comision', 12, 2)->default(0);
+            $table->decimal('abono_liquido', 12, 2)->default(0);
+            $table->string('codigo_autorizacion_tbk', 30)->nullable();
             $table->string('estado', 30)->default('completada');
             $table->timestamps();
         });
