@@ -2,16 +2,24 @@
 
 @section('content')
 <div class="container-fluid px-0">
-    <!-- Encabezado del Módulo POS -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-        <div>
-            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Carrito, Switch RUT & Webpay</h2>
-            <p class="text-muted mb-0">Escanea productos, valida el <strong>RUT del paciente en el Switch de Convenios</strong> (descuento selectivo por vademécum) y cobra en Transbank.</p>
+    <!-- Encabezado del Módulo POS con Identidad Visual del Rol Vendedor -->
+    <div class="p-3.5 mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3 p-3"
+         style="background: linear-gradient(125deg, #0F172A 0%, #1E3A8A 60%, #1D4ED8 100%); box-shadow: 0 10px 26px -6px rgba(30, 58, 138, 0.35);">
+        <div class="d-flex align-items-center gap-3">
+            <svg width="52" height="52" class="flex-shrink-0"><use href="#icon-role-vendedor"></use></svg>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-info text-dark fw-bold rounded-pill px-2.5 py-1" style="font-size: 0.7rem;">
+                        VISTA OPERATIVA VENDEDOR DE FARMACIA
+                    </span>
+                    <span class="badge bg-white bg-opacity-10 text-white rounded-pill font-mono" style="font-size: 0.7rem;">
+                        Operador: {{ auth()->user()->name ?? 'Camila Andrea Muñoz (Caja #1)' }}
+                    </span>
+                </div>
+                <h3 class="fw-extrabold mb-0">Terminal Punto de Venta (POS) — Carrito Multi-Producto, Switch RUT & Webpay</h3>
+            </div>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-semibold">
-                <i class="bi bi-person-vcard-fill me-1"></i>Switch Aprobador RUT (I-Med) Activo
-            </span>
             <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
                 <i class="bi bi-credit-card-2-front me-1"></i>Pasarela Tarjeta Webpay Activa
             </span>
@@ -342,7 +350,7 @@
                          style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 65%, #1E40AF 100%); min-height: 155px;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="rounded-2 bg-warning" style="width: 38px; height: 28px; opacity: 0.9; border: 1px solid rgba(255,255,255,0.4);"></div>
+                                <svg width="42" height="31"><use href="#icon-emv-chip"></use></svg>
                                 <i class="bi bi-wifi fs-5 text-white-50" style="transform: rotate(90deg);"></i>
                             </div>
                             <span id="visualCardBrand" class="badge bg-white text-dark fw-extrabold px-2 py-1">REDCOMPRA / VISA</span>

@@ -9,8 +9,24 @@ use Illuminate\Http\Request;
 
 class VisacionQfController extends Controller
 {
+    private function verificarPermisoQf()
+    {
+        $user = auth()->user();
+        if ($user && $user->rol === 'vendedor') {
+            return redirect()->route('pos.index')->with(
+                'rbac_warning',
+                "Acceso Restringido (Rol actual: {$user->rol_nombre}): Como Vendedor puedes enviar solicitudes desde tu Caja POS, pero únicamente el Químico Farmacéutico (Director Técnico) está facultado para visar y aprobar recetas médicas."
+            );
+        }
+        return null;
+    }
+
     public function index()
     {
+        if ($redirect = $this->verificarPermisoQf()) {
+            return $redirect;
+        }
+
         $pendientes = SolicitudVisacion::with('vendedor')
             ->where('estado', 'PENDIENTE')
             ->orderBy('created_at', 'asc')
@@ -137,6 +153,10 @@ class VisacionQfController extends Controller
      */
     public function aprobar(Request $request, SolicitudVisacion $solicitud)
     {
+        if ($redirect = $this->verificarPermisoQf()) {
+            return $redirect;
+        }
+
         $firma = 'QF-ISP-' . strtoupper(substr(md5($solicitud->id . microtime()), 0, 6));
 
         $solicitud->update([
@@ -163,6 +183,10 @@ class VisacionQfController extends Controller
      */
     public function rechazar(Request $request, SolicitudVisacion $solicitud)
     {
+        if ($redirect = $this->verificarPermisoQf()) {
+            return $redirect;
+        }
+
         $motivo = $request->input('observaciones_qf') ?: 'Receta rechazada por incumplimiento sanitario (enmendadura o vigencia > 30 días).';
 
         $solicitud->update([

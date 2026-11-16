@@ -2,22 +2,25 @@
 
 @section('content')
 <div class="container-fluid px-0">
-    <!-- Encabezado de Dirección Técnica y Visación QF -->
+    <!-- Encabezado de Dirección Técnica y Visación QF con Icono Vectorial HD -->
     <div class="p-4 mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3"
          style="background: linear-gradient(125deg, #064E3B 0%, #047857 55%, #0F172A 100%); box-shadow: 0 12px 28px -8px rgba(4, 120, 87, 0.4);">
-        <div>
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill">
-                    <i class="bi bi-award-fill me-1"></i>DIRECCIÓN TÉCNICA • QUÍMICO FARMACÉUTICO
-                </span>
-                <span class="badge bg-white bg-opacity-10 text-white px-3 py-1 rounded-pill font-mono small">
-                    <span class="scanner-dot me-1"></span>Escuchando Cajas POS en Vivo (3s)
-                </span>
+        <div class="d-flex align-items-center gap-3">
+            <svg width="58" height="58" class="flex-shrink-0"><use href="#icon-role-qf"></use></svg>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill">
+                        VISTA EXCLUSIVA DIRECCIÓN TÉCNICA • QUÍMICO FARMACÉUTICO
+                    </span>
+                    <span class="badge bg-white bg-opacity-10 text-white px-3 py-1 rounded-pill font-mono small">
+                        <span class="scanner-dot me-1"></span>Escuchando Cajas POS en Vivo (3s)
+                    </span>
+                </div>
+                <h2 class="fw-extrabold mb-1">Central de Visación de Recetas y Controlados (ISP / MINSAL)</h2>
+                <p class="mb-0 text-white-50 small">
+                    Revisa, aprueba con firma digital sanitaria o rechaza las solicitudes de medicamentos con prescripción enviadas en tiempo real desde las cajas de venta.
+                </p>
             </div>
-            <h2 class="fw-extrabold mb-1">Central de Visación de Recetas y Controlados (ISP / MINSAL)</h2>
-            <p class="mb-0 text-white-50 small">
-                Revisa, aprueba con firma digital sanitaria o rechaza las solicitudes de medicamentos con prescripción enviadas en tiempo real desde las cajas de venta.
-            </p>
         </div>
         <div class="text-end">
             <div class="display-6 fw-extrabold font-mono mb-0" id="contadorPendientesHeader">{{ $pendientes->count() }}</div>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>PharmaCore POS — Sistema de Farmacia Privada</title>
+    <title>PharmaCore ERP — Sistema de Farmacia Privada</title>
     <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,81 +36,79 @@
         }
 
         .bg-azul-sanitario {
-            background: linear-gradient(180deg, #0F172A 0%, #1E3A8A 55%, #1E40AF 100%);
+            background: linear-gradient(180deg, #090E1A 0%, #0F172A 40%, #1E3A8A 100%);
         }
 
         .sidebar {
-            width: 255px;
-            min-width: 255px;
-            box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
+            width: 265px;
+            min-width: 265px;
+            box-shadow: 6px 0 28px rgba(15, 23, 42, 0.22);
             z-index: 1030;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         @media (max-width: 991.98px) {
             .sidebar {
-                width: 210px;
-                min-width: 210px;
+                width: 215px;
+                min-width: 215px;
             }
         }
 
         .brand-box {
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 16px;
             padding: 13px 15px;
-        }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 11px;
-            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.3rem;
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-            flex-shrink: 0;
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.15);
         }
 
         .nav-sidebar .nav-link {
             color: rgba(255, 255, 255, 0.78);
-            border-radius: 11px;
+            border-radius: 12px;
             padding: 10px 14px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.89rem;
             display: flex;
             align-items: center;
-            gap: 10px;
-            transition: all 0.2s ease;
-            margin-bottom: 5px;
+            gap: 11px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            margin-bottom: 6px;
+            border: 1px solid transparent;
         }
 
         .nav-sidebar .nav-link:hover {
             color: #ffffff;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.09);
+            border-color: rgba(255, 255, 255, 0.12);
             transform: translateX(3px);
         }
 
         .nav-sidebar .nav-link.active {
             color: #ffffff;
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.95) 0%, rgba(5, 150, 105, 0.9) 100%);
-            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.28) 0%, rgba(5, 150, 105, 0.12) 100%);
+            border: 1px solid rgba(52, 211, 153, 0.55);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.25);
+        }
+
+        .nav-svg-icon {
+            width: 22px;
+            height: 22px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
         }
 
         .sidebar-status {
-            background: rgba(15, 23, 42, 0.45);
+            background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 11px 13px;
+            border-radius: 14px;
+            padding: 12px 14px;
         }
 
         .btn-verde-medico {
             background: linear-gradient(135deg, #10B981 0%, #059669 100%);
             color: white;
             border: none;
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+            box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
             transition: all 0.2s ease;
         }
 
@@ -118,44 +116,44 @@
             background: linear-gradient(135deg, #059669 0%, #047857 100%);
             color: white;
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.38);
         }
 
         .card-pro {
             background: #ffffff;
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            border-radius: 16px;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            border: 1px solid rgba(226, 232, 240, 0.95);
+            border-radius: 18px;
+            box-shadow: 0 6px 24px -4px rgba(15, 23, 42, 0.06);
         }
 
         .card-pro .card-header {
             background: transparent;
             border-bottom: 1px solid #F1F5F9;
-            padding: 15px 20px;
+            padding: 16px 20px;
             font-weight: 700;
         }
 
         .kpi-card {
-            border-radius: 16px;
-            border: 1px solid rgba(226, 232, 240, 0.9);
+            border-radius: 18px;
+            border: 1px solid rgba(226, 232, 240, 0.95);
             background: #ffffff;
-            box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+            box-shadow: 0 6px 24px -4px rgba(15, 23, 42, 0.05);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .kpi-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.1);
+            box-shadow: 0 14px 28px -4px rgba(15, 23, 42, 0.1);
         }
 
         .kpi-icon {
-            width: 50px;
-            height: 50px;
+            width: 48px;
+            height: 48px;
             border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
+            font-size: 1.35rem;
             flex-shrink: 0;
         }
 
@@ -177,15 +175,15 @@
         .scanner-box {
             background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
             border: 2px solid #10B981;
-            border-radius: 16px;
+            border-radius: 18px;
             color: #fff;
-            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 12px 28px -6px rgba(16, 185, 129, 0.22);
         }
 
         .scanner-input {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.96);
             border: 2px solid transparent;
-            border-radius: 10px;
+            border-radius: 12px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 1.05rem;
             font-weight: 700;
@@ -200,10 +198,22 @@
         }
 
         .topbar {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
             border-bottom: 1px solid #E2E8F0;
             padding: 10px 24px;
+        }
+
+        .role-pill-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            border-radius: 999px;
+            padding: 5px 13px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s ease;
         }
 
         .table > :not(caption) > * > * {
@@ -223,110 +233,173 @@
     </style>
 </head>
 <body>
+    {{-- Incluir librería de iconos vectoriales HD diseñados a medida --}}
+    @include('partials.svg-icons')
+
     @php
         $visacionesPendientesCount = \App\Models\SolicitudVisacion::where('estado', 'PENDIENTE')->count();
         $qfEnTurno = \App\Models\User::where('rol', 'qf')->where('activo', true)->first();
         $perfilesRapidos = \App\Models\User::whereIn('email', ['vendedor@farmacia.cl', 'qf@farmacia.cl', 'admin@farmacia.cl'])->get();
         $usuarioActual = auth()->user();
+        $rolActual = $usuarioActual ? $usuarioActual->rol : null;
     @endphp
 
     <div class="d-flex min-vh-100">
-        <!-- Sidebar de Navegación -->
+        <!-- Sidebar de Navegación Adaptativo por Rol -->
         <nav class="bg-azul-sanitario text-white p-3 vh-100 sticky-top d-flex flex-column justify-content-between sidebar">
             <div>
+                <!-- Marca Oficial con Escudo Vectorial 3D -->
                 <div class="brand-box d-flex align-items-center gap-3 mb-3">
-                    <div class="brand-icon">
-                        <i class="bi bi-capsule-pill"></i>
-                    </div>
+                    <svg width="42" height="42" class="flex-shrink-0">
+                        <use href="#icon-pharmacore-logo"></use>
+                    </svg>
                     <div>
-                        <h6 class="fw-bold mb-0 text-white">Sistema Farmacia</h6>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle small mt-1" style="font-size: 0.68rem;">
-                            DS 466 MINSAL • FEFO
+                        <h6 class="fw-extrabold mb-0 text-white tracking-tight">PharmaCore ERP</h6>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small mt-1" style="font-size: 0.66rem;">
+                            DS 466 MINSAL • SII • FEFO
                         </span>
                     </div>
                 </div>
 
-                <!-- Tarjeta de Sesión Activa -->
-                <div class="p-2 rounded-3 mb-3 border border-light border-opacity-10" style="background: rgba(255,255,255,0.06);">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span class="text-white-50" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px;">Sesión Activa</span>
-                        <a href="{{ route('login') }}" class="text-info text-decoration-none" style="font-size: 0.72rem;">
-                            <i class="bi bi-box-arrow-in-right"></i> Cambiar
-                        </a>
-                    </div>
+                <!-- Tarjeta de Identidad del Rol Conectado (Con Icono Vectorial HD a Medida) -->
+                <div class="p-2.5 rounded-4 mb-3 border border-light border-opacity-15 p-2" style="background: rgba(15, 23, 42, 0.55);">
                     @if($usuarioActual)
-                        <div class="fw-bold small text-white text-truncate mt-1">{{ $usuarioActual->name }}</div>
-                        <span class="badge bg-info text-dark" style="font-size: 0.68rem;">{{ $usuarioActual->rol_nombre }}</span>
+                        @php
+                            $svgRolId = match($rolActual) {
+                                'vendedor' => '#icon-role-vendedor',
+                                'qf' => '#icon-role-qf',
+                                'admin' => '#icon-role-admin',
+                                default => '#icon-role-vendedor'
+                            };
+                            $colorBadgeRol = match($rolActual) {
+                                'vendedor' => 'bg-primary text-white',
+                                'qf' => 'bg-success text-white',
+                                'admin' => 'bg-warning text-dark',
+                                default => 'bg-info text-dark'
+                            };
+                        @endphp
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <svg width="36" height="36" class="flex-shrink-0">
+                                <use href="{{ $svgRolId }}"></use>
+                            </svg>
+                            <div class="min-w-0 flex-grow-1">
+                                <div class="fw-bold small text-white text-truncate">{{ $usuarioActual->name }}</div>
+                                <span class="badge {{ $colorBadgeRol }}" style="font-size: 0.65rem;">{{ strtoupper($usuarioActual->rol_nombre) }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-1 mt-1 border-top border-secondary border-opacity-25" style="font-size: 0.7rem;">
+                            <span class="text-white-50 font-mono">{{ $usuarioActual->rut }}</span>
+                            <a href="{{ route('login') }}" class="text-info text-decoration-none fw-semibold">Cambiar cuenta →</a>
+                        </div>
                     @else
-                        <div class="fw-bold small text-white mt-1">Modo Demostración Multirrol</div>
-                        <span class="badge bg-warning text-dark" style="font-size: 0.68rem;">Acceso Completo Habilitado</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <svg width="34" height="34" class="flex-shrink-0">
+                                <use href="#icon-role-admin"></use>
+                            </svg>
+                            <div>
+                                <div class="fw-bold small text-white">Sin Sesión Iniciada</div>
+                                <a href="{{ route('login') }}" class="badge bg-warning text-dark text-decoration-none" style="font-size: 0.68rem;">
+                                    Iniciar Sesión por Rol →
+                                </a>
+                            </div>
+                        </div>
                     @endif
                 </div>
 
-                <div class="text-uppercase text-white-50 small fw-bold px-2 mb-1" style="font-size: 0.68rem; letter-spacing: 1px;">
-                    Módulos del Sistema
+                <!-- Menú Personalizado según el Login Activo -->
+                <div class="text-uppercase text-white-50 small fw-bold px-2 mb-2" style="font-size: 0.67rem; letter-spacing: 1px;">
+                    @if($rolActual === 'vendedor')
+                        Vista Exclusiva Vendedor Caja
+                    @elseif($rolActual === 'qf')
+                        Vista Dirección Técnica (Q.F.)
+                    @elseif($rolActual === 'admin')
+                        Vista Administración Total
+                    @else
+                        Menú General de Módulos
+                    @endif
                 </div>
+
                 <ul class="nav flex-column nav-sidebar">
-                    <li class="nav-item">
-                        <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                            <i class="bi bi-grid-1x2-fill"></i>
-                            <span>Dashboard BI</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
-                            <i class="bi bi-upc-scan"></i>
-                            <span>Punto de Venta</span>
-                            <span class="ms-auto badge bg-light text-dark rounded-pill" style="font-size: 0.68rem;">Vendedor</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.*') ? 'active' : '' }}">
-                            <i class="bi bi-file-earmark-medical-fill"></i>
-                            <span>Visación Recetas</span>
-                            <span id="sidebarBadgeVisaciones" class="ms-auto badge {{ $visacionesPendientesCount > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill">
-                                {{ $visacionesPendientesCount }}
-                            </span>
-                        </a>
-                    </li>
+                    {{-- Dashboard BI: visible para Admin, QF o sin login --}}
+                    @if(!$rolActual || in_array($rolActual, ['admin', 'qf']))
+                        <li class="nav-item">
+                            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-dashboard"></use></svg>
+                                <span>Dashboard BI Vivo</span>
+                            </a>
+                        </li>
+                    @endif
+
+                    {{-- Punto de Venta POS: Vista principal del Vendedor y supervisable por Admin --}}
+                    @if(!$rolActual || in_array($rolActual, ['vendedor', 'admin']))
+                        <li class="nav-item">
+                            <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-pos"></use></svg>
+                                <span>Terminal Caja POS</span>
+                                <span class="ms-auto badge bg-success text-white rounded-pill" style="font-size: 0.64rem;">FEFO</span>
+                            </a>
+                        </li>
+                    @endif
+
+                    {{-- Central de Visación de Recetas: Vista principal del Químico Farmacéutico (y auditable por Admin) --}}
+                    @if(!$rolActual || in_array($rolActual, ['qf', 'admin']))
+                        <li class="nav-item">
+                            <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-visacion"></use></svg>
+                                <span>Visación Recetas Q.F.</span>
+                                <span id="sidebarBadgeVisaciones" class="ms-auto badge {{ $visacionesPendientesCount > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill">
+                                    {{ $visacionesPendientesCount }}
+                                </span>
+                            </a>
+                        </li>
+                    @endif
+
+                    {{-- Inventario y Lotes FEFO: disponible para consulta y abastecimiento --}}
                     <li class="nav-item">
                         <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
-                            <i class="bi bi-boxes"></i>
+                            <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
                             <span>Inventario y Lotes</span>
                         </a>
                     </li>
+
+                    {{-- Operaciones Caja Z, Boletas SII, Cadena de Frío & Recall ISP --}}
                     <li class="nav-item">
                         <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
-                            <i class="bi bi-receipt-cutoff"></i>
+                            <svg class="nav-svg-icon"><use href="#icon-nav-operaciones"></use></svg>
                             <span>Caja Z, SII & ISP</span>
-                            <span class="ms-auto badge bg-info text-dark rounded-pill" style="font-size: 0.65rem;">ERP</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
-                            <i class="bi bi-people-fill"></i>
-                            <span>Personal y Turnos</span>
-                            <span class="ms-auto badge bg-warning text-dark rounded-pill" style="font-size: 0.65rem;">Admin</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
+
+                    {{-- Administración de Personal, Turnos Nocturnos, Licencias y Reemplazos: EXCLUSIVO DEL ADMINISTRADOR --}}
+                    @if($rolActual === 'admin')
+                        <li class="nav-item">
+                            <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-personal"></use></svg>
+                                <span>Personal y Turnos</span>
+                                <span class="ms-auto badge bg-warning text-dark rounded-pill" style="font-size: 0.62rem;">SOLO ADMIN</span>
+                            </a>
+                        </li>
+                    @endif
+
+                    <li class="nav-item mt-1 pt-1 border-top border-secondary border-opacity-25">
                         <a href="{{ route('login') }}" class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}">
-                            <i class="bi bi-shield-lock-fill"></i>
-                            <span>Login / Cuentas</span>
+                            <i class="bi bi-person-Bounding-box fs-5 text-info"></i>
+                            <span>Portal Login / Cuentas</span>
                         </a>
                     </li>
                 </ul>
             </div>
 
+            <!-- Pie de Sidebar: Presencia Obligatoria del Químico Farmacéutico (DS 466 MINSAL) -->
             <div class="sidebar-status text-white">
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="scanner-dot"></span>
-                    <span class="small fw-bold" style="font-size: 0.78rem;">D.T. en Ejercicio (DS 466):</span>
+                    <span class="small fw-bold" style="font-size: 0.76rem;">D.T. en Ejercicio (DS 466):</span>
                 </div>
-                <div class="text-white fw-semibold" style="font-size: 0.75rem;">
+                <div class="text-white fw-semibold" style="font-size: 0.74rem;">
                     {{ $qfEnTurno ? $qfEnTurno->name : 'Dr. Sebastián Morales (Q.F.)' }}
                 </div>
-                <div class="text-white-50 font-mono" style="font-size: 0.7rem;">
+                <div class="text-white-50 font-mono" style="font-size: 0.69rem;">
                     Reg. ISP: {{ $qfEnTurno->registro_isp ?? 'SIS-QF-48291' }}
                 </div>
             </div>
@@ -334,44 +407,59 @@
 
         <!-- Área Principal -->
         <div class="flex-grow-1 d-flex flex-column min-w-0">
-            <!-- Barra Superior con Selector Rápido de Cuentas y Termohigrómetro ISP -->
+            <!-- Barra Superior con Termohigrómetro ISP y Selector Rápido de las 3 Cuentas (Cada una con su Vista) -->
             <header class="topbar d-flex flex-wrap justify-content-between align-items-center sticky-top gap-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1 rounded-pill small">
-                        <i class="bi bi-thermometer-snow me-1"></i>Cadena Frío: <strong>4.2°C</strong> (Óptimo 2°-8°C)
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1.5 rounded-pill small">
+                        <i class="bi bi-snow2 me-1 text-primary"></i>Cadena Frío: <strong>4.2°C</strong> (2°–8°C)
                     </span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small d-none d-xl-inline-block">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill small d-none d-xl-inline-block">
                         <i class="bi bi-thermometer-half me-1"></i>Sala: <strong>21.4°C</strong> • HR 48%
                     </span>
                 </div>
 
-                <!-- Botones de Cambio Rápido de Rol en 1 Clic para Pruebas -->
+                <!-- Botones con Iconos Vectoriales HD para Alternar entre las 3 Vistas de Usuario en 1 Clic -->
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="text-muted small fw-semibold d-none d-md-inline">Simular vista como:</span>
+                    <span class="text-muted small fw-bold d-none d-md-inline" style="font-size: 0.75rem;">Entrar a la vista de:</span>
                     @foreach($perfilesRapidos as $p)
                         @php
                             $isCurrent = $usuarioActual && $usuarioActual->id === $p->id;
-                            $btnClass = match($p->rol) {
-                                'vendedor' => $isCurrent ? 'btn-primary' : 'btn-outline-primary',
-                                'qf' => $isCurrent ? 'btn-success' : 'btn-outline-success',
-                                'admin' => $isCurrent ? 'btn-dark' : 'btn-outline-dark',
-                                default => 'btn-outline-secondary'
+                            $svgId = match($p->rol) {
+                                'vendedor' => '#icon-role-vendedor',
+                                'qf' => '#icon-role-qf',
+                                'admin' => '#icon-role-admin',
+                                default => '#icon-role-vendedor'
                             };
-                            $rolCorto = match($p->rol) {
-                                'vendedor' => '👨‍💼 Vendedor POS',
-                                'qf' => '🧪 Químico Farmacéutico',
-                                'admin' => '🛡️ Administrador',
+                            $labelVista = match($p->rol) {
+                                'vendedor' => 'Vista Vendedor (Caja POS)',
+                                'qf' => 'Vista Químico Farmacéutico (Visación)',
+                                'admin' => 'Vista Administrador (Personal y Turnos)',
                                 default => $p->rol
                             };
+                            $stylePill = $isCurrent
+                                ? 'background: #0F172A; color: #fff; border: 2px solid #10B981; box-shadow: 0 4px 12px rgba(16,185,129,0.25);'
+                                : 'background: #F8FAFC; color: #0F172A; border: 1px solid #CBD5E1;';
                         @endphp
-                        <a href="{{ route('auth.quick-switch', $p->id) }}" class="btn btn-sm {{ $btnClass }} rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
-                            {{ $rolCorto }}
+                        <a href="{{ route('auth.quick-switch', $p->id) }}" class="role-pill-btn" style="{{ $stylePill }}">
+                            <svg width="20" height="20"><use href="{{ $svgId }}"></use></svg>
+                            <span>{{ $labelVista }}</span>
                         </a>
                     @endforeach
                 </div>
             </header>
 
             <main class="flex-grow-1 p-4">
+                {{-- Alerta de Seguridad RBAC cuando un rol sin permisos intenta entrar al panel de otro rol --}}
+                @if(session('rbac_warning'))
+                    <div class="alert alert-warning border-warning border-2 shadow-sm rounded-4 d-flex align-items-center gap-3 mb-4">
+                        <svg width="38" height="38" class="flex-shrink-0"><use href="#icon-role-admin"></use></svg>
+                        <div>
+                            <div class="fw-extrabold text-dark">Control de Permisos por Rol (RBAC)</div>
+                            <div class="small text-dark">{{ session('rbac_warning') }}</div>
+                        </div>
+                    </div>
+                @endif
+
                 @yield('content')
             </main>
         </div>

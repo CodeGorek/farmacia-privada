@@ -2,17 +2,20 @@
 
 @section('content')
 <div class="container-fluid px-0">
-    <!-- Encabezado de Administración de Personal y Turnos -->
+    <!-- Encabezado de Administración de Personal y Turnos con Icono Vectorial HD -->
     <div class="p-4 mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3"
-         style="background: linear-gradient(125deg, #0F172A 0%, #1E293B 55%, #1E40AF 100%); box-shadow: 0 12px 28px -8px rgba(15, 23, 42, 0.35);">
-        <div>
-            <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill mb-2">
-                <i class="bi bi-shield-shaded me-1"></i>PANEL EXCLUSIVO DE ADMINISTRACIÓN
-            </span>
-            <h2 class="fw-extrabold mb-1">Gestión de Cuentas, Turnos Nocturnos, Licencias y Reemplazos</h2>
-            <p class="mb-0 text-white-50 small">
-                Crea y administra cuentas de Vendedores y Químicos Farmacéuticos aprobadores, habilita/deshabilita accesos y programa turnos, licencias médicas, días libres y reemplazos con fechas.
-            </p>
+         style="background: linear-gradient(125deg, #090E1A 0%, #1E293B 55%, #1E40AF 100%); box-shadow: 0 12px 28px -8px rgba(15, 23, 42, 0.35);">
+        <div class="d-flex align-items-center gap-3">
+            <svg width="58" height="58" class="flex-shrink-0"><use href="#icon-role-admin"></use></svg>
+            <div>
+                <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill mb-1">
+                    VISTA EXCLUSIVA ADMINISTRADOR GENERAL • ACCESO RESTRINGIDO RBAC
+                </span>
+                <h2 class="fw-extrabold mb-1">Gestión de Cuentas, Turnos Nocturnos, Licencias y Reemplazos</h2>
+                <p class="mb-0 text-white-50 small">
+                    Único perfil autorizado para crear y modificar cuentas de Vendedores y Químicos Farmacéuticos, deshabilitar accesos y definir horarios, turnos nocturnos, licencias y reemplazos.
+                </p>
+            </div>
         </div>
         <div class="d-flex gap-2">
             <span class="badge bg-white bg-opacity-10 text-white px-3 py-2 rounded-3">
@@ -59,10 +62,10 @@
                             <div class="col-7">
                                 <label class="form-label small fw-bold mb-1">Rol en la Farmacia</label>
                                 <select name="rol" class="form-select form-select-sm fw-semibold" required>
-                                    <option value="vendedor">👨‍💼 Vendedor / Auxiliar POS</option>
-                                    <option value="qf">🧪 Químico Farmacéutico (Aprobador)</option>
-                                    <option value="bodeguero">📦 Encargado de Bodega FEFO</option>
-                                    <option value="admin">🛡️ Administrador General</option>
+                                    <option value="vendedor">Vendedor / Auxiliar POS</option>
+                                    <option value="qf">Químico Farmacéutico (Aprobador D.T.)</option>
+                                    <option value="bodeguero">Encargado de Bodega FEFO</option>
+                                    <option value="admin">Administrador General</option>
                                 </select>
                             </div>
                         </div>
@@ -124,10 +127,10 @@
                         <div class="mb-2">
                             <label class="form-label small fw-bold mb-1">Modalidad de Turno</label>
                             <select name="tipo_turno" id="selectTipoTurno" class="form-select form-select-sm fw-semibold" required>
-                                <option value="DIURNO_MANANA">☀️ Turno Diurno Mañana (08:00 - 16:30)</option>
-                                <option value="DIURNO_TARDE">🌤️ Turno Diurno Tarde (14:00 - 22:00)</option>
-                                <option value="NOCTURNO_GUARDIA">🌙 Turno Nocturno / Guardia Urgencia (22:00 - 08:00)</option>
-                                <option value="FIN_DE_SEMANA">📅 Turno Fin de Semana / Festivo</option>
+                                <option value="DIURNO_MANANA">Turno Diurno Mañana (08:00 - 16:30)</option>
+                                <option value="DIURNO_TARDE">Turno Diurno Tarde (14:00 - 22:00)</option>
+                                <option value="NOCTURNO_GUARDIA">Turno Nocturno / Guardia Urgencia (22:00 - 08:00)</option>
+                                <option value="FIN_DE_SEMANA">Turno Fin de Semana / Festivo</option>
                             </select>
                         </div>
 
@@ -198,10 +201,10 @@
                         <div class="mb-2">
                             <label class="form-label small fw-bold mb-1">Causal / Tipo de Ausencia</label>
                             <select name="tipo" class="form-select form-select-sm fw-semibold" required>
-                                <option value="LICENCIA_MEDICA">🏥 Licencia Médica (Bloquea Login durante reposo)</option>
-                                <option value="DIA_LIBRE">🌴 Día Libre / Descanso Compensatorio</option>
-                                <option value="VACACIONES">✈️ Feriado Legal / Vacaciones</option>
-                                <option value="PERMISO_ADMINISTRATIVO">📋 Permiso Administrativo</option>
+                                <option value="LICENCIA_MEDICA">Licencia Médica (Bloquea Login durante reposo)</option>
+                                <option value="DIA_LIBRE">Día Libre / Descanso Compensatorio</option>
+                                <option value="VACACIONES">Feriado Legal / Vacaciones</option>
+                                <option value="PERMISO_ADMINISTRATIVO">Permiso Administrativo</option>
                             </select>
                         </div>
 
@@ -266,18 +269,30 @@
                                     <div class="font-mono small text-muted">{{ $u->rut }} • {{ $u->telefono }}</div>
                                 </td>
                                 <td>
-                                    @if($u->rol === 'qf')
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle">🧪 Químico Farmacéutico</span>
-                                    @elseif($u->rol === 'admin')
-                                        <span class="badge bg-dark text-white">🛡️ Administrador</span>
-                                    @elseif($u->rol === 'vendedor')
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">👨‍💼 Vendedor POS</span>
-                                    @else
-                                        <span class="badge bg-secondary-subtle text-secondary">📦 Bodeguero</span>
-                                    @endif
-                                    @if($u->registro_isp)
-                                        <div class="font-mono small text-muted mt-1">Reg: {{ $u->registro_isp }}</div>
-                                    @endif
+                                    @php
+                                        $svgRowRol = match($u->rol) {
+                                            'qf' => '#icon-role-qf',
+                                            'admin' => '#icon-role-admin',
+                                            default => '#icon-role-vendedor'
+                                        };
+                                    @endphp
+                                    <div class="d-flex align-items-center gap-2">
+                                        <svg width="28" height="28"><use href="{{ $svgRowRol }}"></use></svg>
+                                        <div>
+                                            @if($u->rol === 'qf')
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Químico Farmacéutico</span>
+                                            @elseif($u->rol === 'admin')
+                                                <span class="badge bg-dark text-warning">Administrador General</span>
+                                            @elseif($u->rol === 'vendedor')
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Vendedor POS</span>
+                                            @else
+                                                <span class="badge bg-secondary-subtle text-secondary">Bodeguero FEFO</span>
+                                            @endif
+                                            @if($u->registro_isp)
+                                                <div class="font-mono small text-muted">Reg: {{ $u->registro_isp }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="font-mono small">{{ $u->email }}</td>
                                 <td class="small">{{ $u->horario_habitual }}</td>
