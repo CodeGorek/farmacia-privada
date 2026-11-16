@@ -282,7 +282,7 @@
                             <svg width="36" height="36" class="flex-shrink-0">
                                 <use href="{{ $svgRolId }}"></use>
                             </svg>
-                            <div class="min-w-0 flex-grow-1">
+                            <div class="flex-grow-1 overflow-hidden" style="min-width: 0;">
                                 <div class="fw-bold small text-white text-truncate">{{ $usuarioActual->name }}</div>
                                 <span class="badge {{ $colorBadgeRol }}" style="font-size: 0.65rem;">{{ strtoupper($usuarioActual->rol_nombre) }}</span>
                             </div>

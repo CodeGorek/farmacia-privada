@@ -1,5 +1,5 @@
 {{-- Librería de Iconos Vectoriales HD Personalizados (SVG Multilayer con Gradientes y Brillo Especular) --}}
-<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+<svg xmlns="http://www.w3.org/2000/svg" style="position: absolute; width: 0; height: 0; overflow: hidden;" aria-hidden="true">
     <defs>
         <!-- Gradientes Clínicos de Alta Definición -->
         <linearGradient id="grad-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
