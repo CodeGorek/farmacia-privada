@@ -236,34 +236,48 @@
                             </div>
                         </div>
 
-                        <!-- Bloque de Receta Controlada -->
+                        <!-- Bloque de Receta Controlada + Flujo de Aprobación por Químico Farmacéutico -->
                         <div id="bloqueControlado" class="border border-warning border-2 rounded-4 p-3 mb-3 bg-warning-subtle d-none">
-                            <div class="d-flex align-items-center gap-2 mb-2 text-dark fw-bold">
-                                <i class="bi bi-journal-medical fs-5 text-danger"></i>
-                                <span>Registro Legal Obligatorio — Libro de Medicamentos Controlados</span>
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                                <div class="d-flex align-items-center gap-2 text-dark fw-bold">
+                                    <i class="bi bi-journal-medical fs-5 text-danger"></i>
+                                    <span>Visación Obligatoria Químico Farmacéutico — Libro de Controlados</span>
+                                </div>
+                                <span id="badgeEstadoVisacionPos" class="badge bg-danger text-white">
+                                    Requiere Visación Q.F. antes de cobrar
+                                </span>
                             </div>
-                            <div class="row g-2">
+                            <div class="row g-2 mb-2">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Paciente</label>
-                                    <input type="text" name="rut_paciente" id="inputRutPacienteCtrl" class="form-control form-control-sm" placeholder="12.345.678-9">
+                                    <input type="text" name="rut_paciente" id="inputRutPacienteCtrl" class="form-control form-control-sm" value="12.345.678-5" placeholder="12.345.678-9">
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label small fw-semibold mb-1">Nombre Completo Paciente</label>
-                                    <input type="text" name="nombre_paciente" id="inputNombrePacienteCtrl" class="form-control form-control-sm" placeholder="Nombre y Apellidos del comprador">
+                                    <input type="text" name="nombre_paciente" id="inputNombrePacienteCtrl" class="form-control form-control-sm" value="María Alejandra González" placeholder="Nombre y Apellidos del comprador">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Médico Prescriptor</label>
-                                    <input type="text" name="rut_medico" class="form-control form-control-sm" placeholder="9.876.543-2">
+                                    <input type="text" name="rut_medico" id="inputRutMedicoCtrl" class="form-control form-control-sm" value="9.412.880-2" placeholder="9.876.543-2">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">Nombre Médico</label>
-                                    <input type="text" name="nombre_medico" class="form-control form-control-sm" placeholder="Dr. Nombre Apellido">
+                                    <input type="text" name="nombre_medico" id="inputNombreMedicoCtrl" class="form-control form-control-sm" value="Dr. Roberto Valdés (Psiquiatría)" placeholder="Dr. Nombre Apellido">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">Folio Receta Retenida/Cheque</label>
-                                    <input type="text" name="numero_receta" class="form-control form-control-sm font-mono" placeholder="REC-2026-0091">
+                                    <input type="text" name="numero_receta" id="inputNumeroRecetaCtrl" class="form-control form-control-sm font-mono" value="REC-CHQ-2026-0105" placeholder="REC-2026-0091">
                                 </div>
                             </div>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top border-warning">
+                                <button type="button" id="btnEnviarSolicitudQf" class="btn btn-sm btn-dark fw-bold px-3">
+                                    <i class="bi bi-send-check-fill text-warning me-1"></i>Enviar Solicitud de Aprobación al Químico Farmacéutico
+                                </button>
+                                <a href="{{ route('visacion.index') }}" target="_blank" class="btn btn-sm btn-outline-dark fw-semibold">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Ir a Bandeja del Q.F. (/visacion-qf)
+                                </a>
+                            </div>
+                            <div id="boxRespuestaVisacionQf" class="mt-2 d-none"></div>
                         </div>
 
                         <!-- Totales Generales de la Lista -->
@@ -970,6 +984,82 @@
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('scan')) {
         procesarCodigoDeBarras(urlParams.get('scan'));
+    }
+
+    // Enviar Solicitud de Aprobación de Receta al Químico Farmacéutico en Tiempo Real
+    let visacionPollingTimer = null;
+    const btnEnviarSolicitudQf = document.getElementById('btnEnviarSolicitudQf');
+    const boxRespuestaVisacionQf = document.getElementById('boxRespuestaVisacionQf');
+    const badgeEstadoVisacionPos = document.getElementById('badgeEstadoVisacionPos');
+
+    if (btnEnviarSolicitudQf) {
+        btnEnviarSolicitudQf.addEventListener('click', async function () {
+            if (carrito.length === 0) return;
+            const payload = construirPayloadCarrito();
+            const montoNum = parseInt((txtTotal.textContent || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            payload.monto_total = montoNum;
+            payload.tipo_receta = 'RECETA_CHEQUE_PSICOTROPICO';
+
+            boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-white border small d-flex align-items-center gap-2';
+            boxRespuestaVisacionQf.innerHTML = '<div class="spinner-border spinner-border-sm text-warning"></div><span>Enviando solicitud a la bandeja del Químico Farmacéutico...</span>';
+
+            try {
+                const res = await fetch('{{ route("pos.solicitar-visacion") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'ok') {
+                    window.playScannerBeep(true);
+                    badgeEstadoVisacionPos.className = 'badge bg-warning text-dark';
+                    badgeEstadoVisacionPos.textContent = `PENDIENTE EN BANDEJA Q.F. (${data.folio})`;
+
+                    boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-white border border-warning small';
+                    boxRespuestaVisacionQf.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-hourglass-split text-warning me-1"></i>Solicitud <strong>${data.folio}</strong> enviada. Esperando firma del Químico Farmacéutico...</span>
+                            <a href="{{ route('visacion.index') }}" target="_blank" class="badge bg-primary text-white text-decoration-none">Aprobar como Q.F. →</a>
+                        </div>
+                    `;
+
+                    if (visacionPollingTimer) clearInterval(visacionPollingTimer);
+                    visacionPollingTimer = setInterval(async () => {
+                        try {
+                            const rEst = await fetch(`/pos/solicitud-visacion/${data.solicitud_id}`, {
+                                headers: { 'Accept': 'application/json' }
+                            });
+                            const dEst = await rEst.json();
+                            if (dEst.estado === 'APROBADA') {
+                                clearInterval(visacionPollingTimer);
+                                window.playScannerBeep(true);
+                                badgeEstadoVisacionPos.className = 'badge bg-success text-white';
+                                badgeEstadoVisacionPos.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>APROBADA POR Q.F. (${dEst.codigo_firma_qf})`;
+                                boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-success-subtle border border-success small text-dark';
+                                boxRespuestaVisacionQf.innerHTML = `
+                                    <strong><i class="bi bi-check-circle-fill text-success me-1"></i>¡Visación Aprobada en Línea por ${dEst.qf_nombre}!</strong>
+                                    <div>Firma Digital ISP: <code class="font-mono fw-bold">${dEst.codigo_firma_qf}</code> • Obs: ${dEst.observaciones_qf || 'Conforme'}</div>
+                                `;
+                            } else if (dEst.estado === 'RECHAZADA') {
+                                clearInterval(visacionPollingTimer);
+                                window.playScannerBeep(false);
+                                badgeEstadoVisacionPos.className = 'badge bg-danger text-white';
+                                badgeEstadoVisacionPos.textContent = 'RECHAZADA POR Q.F.';
+                                boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-danger-subtle border border-danger small text-danger';
+                                boxRespuestaVisacionQf.innerHTML = `<strong>Receta Rechazada por Q.F.:</strong> ${dEst.observaciones_qf}`;
+                            }
+                        } catch (e) {}
+                    }, 2500);
+                }
+            } catch (e) {
+                boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-danger-subtle text-danger small';
+                boxRespuestaVisacionQf.textContent = 'Error al enviar solicitud al Químico Farmacéutico.';
+            }
+        });
     }
 
     function construirPayloadCarrito() {

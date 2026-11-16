@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -11,37 +11,55 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
+        'rut',
         'name',
         'email',
+        'rol',
+        'registro_isp',
+        'telefono',
+        'horario_habitual',
+        'activo',
         'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'activo' => 'boolean',
         ];
+    }
+
+    public function getRolNombreAttribute(): string
+    {
+        return match ($this->rol) {
+            'admin' => 'Administrador General',
+            'qf' => 'Químico Farmacéutico (D.T.)',
+            'vendedor' => 'Auxiliar / Vendedor de Farmacia',
+            'bodeguero' => 'Encargado de Bodega FEFO',
+            default => ucfirst($this->rol),
+        };
+    }
+
+    public function turnos(): HasMany
+    {
+        return $this->hasMany(TurnoPersonal::class);
+    }
+
+    public function ausencias(): HasMany
+    {
+        return $this->hasMany(AusenciaReemplazo::class, 'user_id');
+    }
+
+    public function reemplazosAsignados(): HasMany
+    {
+        return $this->hasMany(AusenciaReemplazo::class, 'reemplazante_id');
     }
 }

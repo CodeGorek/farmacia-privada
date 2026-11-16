@@ -1,20 +1,51 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\VisacionQfController;
+use App\Http\Controllers\AdminPersonalController;
 
+// Rutas de Autenticación y Cambio Rápido de Rol (Vendedor / QF / Admin)
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/auth/quick-switch/{user}', [AuthController::class, 'quickSwitch'])->name('auth.quick-switch');
+
+// Dashboard BI en Tiempo Real
 Route::get('/', [PosController::class, 'dashboard'])->name('dashboard');
 Route::get('/dashboard/realtime', [PosController::class, 'dashboardRealtime'])->name('dashboard.realtime');
 
+// Módulo Punto de Venta (POS) — Vendedor
 Route::prefix('pos')->name('pos.')->group(function () {
     Route::get('/', [PosController::class, 'index'])->name('index');
     Route::post('/validar-rut-convenio', [PosController::class, 'validarRutConvenio'])->name('validar-rut');
+    Route::post('/solicitar-visacion-qf', [VisacionQfController::class, 'crearSolicitudDesdePos'])->name('solicitar-visacion');
+    Route::get('/solicitud-visacion/{solicitud}', [VisacionQfController::class, 'estadoSolicitudPos'])->name('estado-visacion');
     Route::post('/procesar-venta', [PosController::class, 'procesarVenta'])->name('procesar');
     Route::post('/webpay/iniciar', [PosController::class, 'iniciarWebpay'])->name('webpay.iniciar');
     Route::match(['get', 'post'], '/webpay/retorno', [PosController::class, 'retornoWebpay'])->name('webpay.retorno');
 });
 
+// Módulo de Visación de Recetas y Dirección Técnica — Químico Farmacéutico (Q.F.)
+Route::prefix('visacion-qf')->name('visacion.')->group(function () {
+    Route::get('/', [VisacionQfController::class, 'index'])->name('index');
+    Route::get('/pendientes-json', [VisacionQfController::class, 'pendientesJson'])->name('pendientes.json');
+    Route::post('/{solicitud}/aprobar', [VisacionQfController::class, 'aprobar'])->name('aprobar');
+    Route::post('/{solicitud}/rechazar', [VisacionQfController::class, 'rechazar'])->name('rechazar');
+});
+
+// Módulo de Administración de Personal, Turnos, Licencias y Reemplazos — Administrador
+Route::prefix('admin/personal')->name('admin.personal.')->group(function () {
+    Route::get('/', [AdminPersonalController::class, 'index'])->name('index');
+    Route::post('/usuarios', [AdminPersonalController::class, 'storeUsuario'])->name('usuarios.store');
+    Route::post('/usuarios/{user}/toggle', [AdminPersonalController::class, 'toggleEstadoUsuario'])->name('usuarios.toggle');
+    Route::post('/turnos', [AdminPersonalController::class, 'storeTurno'])->name('turnos.store');
+    Route::post('/ausencias', [AdminPersonalController::class, 'storeAusenciaReemplazo'])->name('ausencias.store');
+});
+
+// Módulo de Inventario y Lotes FEFO
 Route::prefix('inventario')->name('inventario.')->group(function () {
     Route::get('/', [InventarioController::class, 'index'])->name('index');
     Route::post('/medicamentos', [InventarioController::class, 'storeMedicamento'])->name('medicamentos.store');

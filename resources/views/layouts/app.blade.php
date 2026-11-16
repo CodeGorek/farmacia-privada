@@ -35,22 +35,21 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Sidebar Profesional */
         .bg-azul-sanitario {
             background: linear-gradient(180deg, #0F172A 0%, #1E3A8A 55%, #1E40AF 100%);
         }
 
         .sidebar {
-            width: 245px;
-            min-width: 245px;
+            width: 255px;
+            min-width: 255px;
             box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
             z-index: 1030;
         }
 
         @media (max-width: 991.98px) {
             .sidebar {
-                width: 200px;
-                min-width: 200px;
+                width: 210px;
+                min-width: 210px;
             }
         }
 
@@ -58,33 +57,34 @@
             background: rgba(255, 255, 255, 0.07);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 14px;
-            padding: 14px 16px;
+            padding: 13px 15px;
         }
 
         .brand-icon {
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 40px;
             border-radius: 11px;
             background: linear-gradient(135deg, #10B981 0%, #059669 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.35rem;
+            font-size: 1.3rem;
             color: #fff;
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+            flex-shrink: 0;
         }
 
         .nav-sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.75);
+            color: rgba(255, 255, 255, 0.78);
             border-radius: 11px;
-            padding: 12px 16px;
+            padding: 10px 14px;
             font-weight: 600;
-            font-size: 0.94rem;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             transition: all 0.2s ease;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
 
         .nav-sidebar .nav-link:hover {
@@ -103,10 +103,9 @@
             background: rgba(15, 23, 42, 0.45);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            padding: 12px 14px;
+            padding: 11px 13px;
         }
 
-        /* Botones y Tarjetas */
         .btn-verde-medico {
             background: linear-gradient(135deg, #10B981 0%, #059669 100%);
             color: white;
@@ -132,7 +131,7 @@
         .card-pro .card-header {
             background: transparent;
             border-bottom: 1px solid #F1F5F9;
-            padding: 16px 20px;
+            padding: 15px 20px;
             font-weight: 700;
         }
 
@@ -150,17 +149,16 @@
         }
 
         .kpi-icon {
-            width: 52px;
-            height: 52px;
+            width: 50px;
+            height: 50px;
             border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             flex-shrink: 0;
         }
 
-        /* Animación de pulso para el lector de códigos de barra */
         @keyframes pulse-scanner {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
             70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
@@ -189,7 +187,7 @@
             border: 2px solid transparent;
             border-radius: 10px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 700;
             letter-spacing: 0.5px;
             color: #0F172A;
@@ -202,14 +200,14 @@
         }
 
         .topbar {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid #E2E8F0;
-            padding: 12px 28px;
+            padding: 10px 24px;
         }
 
         .table > :not(caption) > * > * {
-            padding: 0.85rem 1rem;
+            padding: 0.8rem 0.95rem;
         }
 
         .input-cant-fila::-webkit-outer-spin-button,
@@ -225,43 +223,89 @@
     </style>
 </head>
 <body>
+    @php
+        $visacionesPendientesCount = \App\Models\SolicitudVisacion::where('estado', 'PENDIENTE')->count();
+        $qfEnTurno = \App\Models\User::where('rol', 'qf')->where('activo', true)->first();
+        $perfilesRapidos = \App\Models\User::whereIn('email', ['vendedor@farmacia.cl', 'qf@farmacia.cl', 'admin@farmacia.cl'])->get();
+        $usuarioActual = auth()->user();
+    @endphp
+
     <div class="d-flex min-vh-100">
         <!-- Sidebar de Navegación -->
         <nav class="bg-azul-sanitario text-white p-3 vh-100 sticky-top d-flex flex-column justify-content-between sidebar">
             <div>
-                <div class="brand-box d-flex align-items-center gap-3 mb-4">
+                <div class="brand-box d-flex align-items-center gap-3 mb-3">
                     <div class="brand-icon">
                         <i class="bi bi-capsule-pill"></i>
                     </div>
                     <div>
-                        <h5 class="fw-bold mb-0 text-white tracking-tight">Sistema Farmacia</h5>
-                        <span class="badge bg-success-subtle text-success border border-success-subtle small mt-1">
-                            FEFO v2.4 • POS Clínico
+                        <h6 class="fw-bold mb-0 text-white">Sistema Farmacia</h6>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small mt-1" style="font-size: 0.68rem;">
+                            DS 466 MINSAL • FEFO
                         </span>
                     </div>
                 </div>
 
-                <div class="text-uppercase text-white-50 small fw-bold px-2 mb-2" style="font-size: 0.72rem; letter-spacing: 1px;">
-                    Módulos Operativos
+                <!-- Tarjeta de Sesión Activa -->
+                <div class="p-2 rounded-3 mb-3 border border-light border-opacity-10" style="background: rgba(255,255,255,0.06);">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="text-white-50" style="font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.5px;">Sesión Activa</span>
+                        <a href="{{ route('login') }}" class="text-info text-decoration-none" style="font-size: 0.72rem;">
+                            <i class="bi bi-box-arrow-in-right"></i> Cambiar
+                        </a>
+                    </div>
+                    @if($usuarioActual)
+                        <div class="fw-bold small text-white text-truncate mt-1">{{ $usuarioActual->name }}</div>
+                        <span class="badge bg-info text-dark" style="font-size: 0.68rem;">{{ $usuarioActual->rol_nombre }}</span>
+                    @else
+                        <div class="fw-bold small text-white mt-1">Modo Demostración Multirrol</div>
+                        <span class="badge bg-warning text-dark" style="font-size: 0.68rem;">Acceso Completo Habilitado</span>
+                    @endif
+                </div>
+
+                <div class="text-uppercase text-white-50 small fw-bold px-2 mb-1" style="font-size: 0.68rem; letter-spacing: 1px;">
+                    Módulos del Sistema
                 </div>
                 <ul class="nav flex-column nav-sidebar">
                     <li class="nav-item">
                         <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                            <i class="bi bi-grid-1x2-fill fs-5"></i>
-                            <span>Dashboard</span>
+                            <i class="bi bi-grid-1x2-fill"></i>
+                            <span>Dashboard BI</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
-                            <i class="bi bi-upc-scan fs-5"></i>
+                            <i class="bi bi-upc-scan"></i>
                             <span>Punto de Venta</span>
-                            <span class="ms-auto badge bg-light text-dark rounded-pill small">POS</span>
+                            <span class="ms-auto badge bg-light text-dark rounded-pill" style="font-size: 0.68rem;">Vendedor</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.*') ? 'active' : '' }}">
+                            <i class="bi bi-file-earmark-medical-fill"></i>
+                            <span>Visación Recetas</span>
+                            <span id="sidebarBadgeVisaciones" class="ms-auto badge {{ $visacionesPendientesCount > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill">
+                                {{ $visacionesPendientesCount }}
+                            </span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
-                            <i class="bi bi-boxes fs-5"></i>
+                            <i class="bi bi-boxes"></i>
                             <span>Inventario y Lotes</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
+                            <i class="bi bi-people-fill"></i>
+                            <span>Personal y Turnos</span>
+                            <span class="ms-auto badge bg-warning text-dark rounded-pill" style="font-size: 0.65rem;">Admin</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('login') }}" class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}">
+                            <i class="bi bi-shield-lock-fill"></i>
+                            <span>Login / Cuentas</span>
                         </a>
                     </li>
                 </ul>
@@ -270,34 +314,53 @@
             <div class="sidebar-status text-white">
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="scanner-dot"></span>
-                    <span class="small fw-bold">Lector HID Barcode Activo</span>
+                    <span class="small fw-bold" style="font-size: 0.78rem;">D.T. en Ejercicio (DS 466):</span>
                 </div>
-                <div class="text-white-50" style="font-size: 0.76rem;">
-                    Compatible con pistolas láser USB / Bluetooth (EAN-13, Code128).
+                <div class="text-white fw-semibold" style="font-size: 0.75rem;">
+                    {{ $qfEnTurno ? $qfEnTurno->name : 'Dr. Sebastián Morales (Q.F.)' }}
+                </div>
+                <div class="text-white-50 font-mono" style="font-size: 0.7rem;">
+                    Reg. ISP: {{ $qfEnTurno->registro_isp ?? 'SIS-QF-48291' }}
                 </div>
             </div>
         </nav>
 
         <!-- Área Principal -->
         <div class="flex-grow-1 d-flex flex-column min-w-0">
-            <!-- Barra Superior -->
-            <header class="topbar d-flex justify-content-between align-items-center sticky-top">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold">
-                        <i class="bi bi-shield-check me-1"></i> Algoritmo FEFO Transaccional (LockForUpdate)
+            <!-- Barra Superior con Selector Rápido de Cuentas y Termohigrómetro ISP -->
+            <header class="topbar d-flex flex-wrap justify-content-between align-items-center sticky-top gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1 rounded-pill small">
+                        <i class="bi bi-thermometer-snow me-1"></i>Cadena Frío: <strong>4.2°C</strong> (Óptimo 2°-8°C)
                     </span>
-                    <span class="text-muted small d-none d-md-inline">
-                        <i class="bi bi-database-check me-1 text-success"></i> Trazabilidad de Lotes & Controlados
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small d-none d-xl-inline-block">
+                        <i class="bi bi-thermometer-half me-1"></i>Sala: <strong>21.4°C</strong> • HR 48%
                     </span>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <div class="text-end d-none d-sm-block">
-                        <div class="fw-bold small leading-none">Turno Farmacéutico Activo</div>
-                        <div class="text-muted" style="font-size: 0.75rem;" id="relojTopbar">{{ now()->format('d/m/Y H:i') }}</div>
-                    </div>
-                    <a href="{{ route('pos.index') }}" class="btn btn-verde-medico btn-sm px-3 py-2 rounded-3 fw-semibold">
-                        <i class="bi bi-upc-scan me-1"></i> Ir a Caja POS
-                    </a>
+
+                <!-- Botones de Cambio Rápido de Rol en 1 Clic para Pruebas -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="text-muted small fw-semibold d-none d-md-inline">Simular vista como:</span>
+                    @foreach($perfilesRapidos as $p)
+                        @php
+                            $isCurrent = $usuarioActual && $usuarioActual->id === $p->id;
+                            $btnClass = match($p->rol) {
+                                'vendedor' => $isCurrent ? 'btn-primary' : 'btn-outline-primary',
+                                'qf' => $isCurrent ? 'btn-success' : 'btn-outline-success',
+                                'admin' => $isCurrent ? 'btn-dark' : 'btn-outline-dark',
+                                default => 'btn-outline-secondary'
+                            };
+                            $rolCorto = match($p->rol) {
+                                'vendedor' => '👨‍💼 Vendedor POS',
+                                'qf' => '🧪 Químico Farmacéutico',
+                                'admin' => '🛡️ Administrador',
+                                default => $p->rol
+                            };
+                        @endphp
+                        <a href="{{ route('auth.quick-switch', $p->id) }}" class="btn btn-sm {{ $btnClass }} rounded-pill px-3 py-1 fw-bold" style="font-size: 0.78rem;">
+                            {{ $rolCorto }}
+                        </a>
+                    @endforeach
                 </div>
             </header>
 
@@ -309,7 +372,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Sonido clínico para confirmación/error del lector de código de barras (Web Audio API)
         window.playScannerBeep = function(success = true) {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
