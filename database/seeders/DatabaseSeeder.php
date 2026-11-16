@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Rol;
 use App\Models\Convenio;
+use App\Models\AfiliadoConvenio;
 use App\Models\Medicamento;
 use App\Models\Lote;
 use App\Models\Venta;
@@ -23,7 +24,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $convAdulto = Convenio::create([
-            'nombre' => 'Convenio Adulto Mayor',
+            'nombre' => 'Convenio Adulto Mayor / FONASA',
             'rut_institucion' => '69.000.100-1',
             'porcentaje_descuento' => 15.00,
             'activo' => true,
@@ -125,10 +126,51 @@ class DatabaseSeeder extends Seeder
             'stock_bodega' => 120,
         ]);
 
-        // Ventas iniciales con cálculo oficial de tarifas Transbank
+        // =========================================================================
+        // VADEMÉCUM DE PRODUCTOS ASOCIADOS A CADA CONVENIO (Cobertura Selectiva)
+        // =========================================================================
+        // 1. Isapre SaludVida: Cubre Clonazepam (25%), Amoxicilina (20%) y Losartán (20%). NO cubre Paracetamol.
+        $convIsapre->medicamentos()->attach([
+            $clonazepam->id => ['porcentaje_descuento' => 25.00],
+            $amoxicilina->id => ['porcentaje_descuento' => 20.00],
+            $losartan->id => ['porcentaje_descuento' => 20.00],
+        ]);
+
+        // 2. Convenio Adulto Mayor / FONASA: Cubre Paracetamol (15%) y Losartán Crónico (30%). NO cubre Amoxicilina ni Clonazepam.
+        $convAdulto->medicamentos()->attach([
+            $paracetamol->id => ['porcentaje_descuento' => 15.00],
+            $losartan->id => ['porcentaje_descuento' => 30.00],
+        ]);
+
+        // =========================================================================
+        // PADRÓN DE AFILIADOS POR RUT (Para Switch Aprobador en Línea)
+        // =========================================================================
+        AfiliadoConvenio::create([
+            'rut' => '12345678-5',
+            'nombre_afiliado' => 'María Alejandra González',
+            'convenio_id' => $convIsapre->id,
+            'estado' => 'ACTIVO',
+        ]);
+
+        AfiliadoConvenio::create([
+            'rut' => '9876543-3',
+            'nombre_afiliado' => 'Jorge Eduardo Ramírez',
+            'convenio_id' => $convAdulto->id,
+            'estado' => 'ACTIVO',
+        ]);
+
+        AfiliadoConvenio::create([
+            'rut' => '15222333-4',
+            'nombre_afiliado' => 'Pedro Soto Morales',
+            'convenio_id' => $convIsapre->id,
+            'estado' => 'SUSPENDIDO_MORA',
+        ]);
+
+        // Ventas iniciales
         $tbk1 = PosController::calcularTarifaTransbank(23880, 'efectivo');
         $v1 = Venta::create([
             'convenio_id' => null,
+            'rut_cliente' => null,
             'subtotal' => 23880,
             'descuento' => 0,
             'total' => 23880,
@@ -150,12 +192,13 @@ class DatabaseSeeder extends Seeder
             'subtotal' => 23880,
         ]);
 
-        $tbk2 = PosController::calcularTarifaTransbank(10384, 'debito');
+        $tbk2 = PosController::calcularTarifaTransbank(9735, 'debito');
         $v2 = Venta::create([
             'convenio_id' => $convIsapre->id,
+            'rut_cliente' => '12.345.678-5',
             'subtotal' => 12980,
-            'descuento' => 2596,
-            'total' => 10384,
+            'descuento' => 3245,
+            'total' => 9735,
             'metodo_pago' => 'debito',
             'tasa_transbank' => $tbk2['tasa_transbank'],
             'comision_transbank' => $tbk2['comision_transbank'],
@@ -177,20 +220,21 @@ class DatabaseSeeder extends Seeder
             'venta_id' => $v2->id,
             'medicamento_id' => $clonazepam->id,
             'lote_id' => $loteClo->id,
-            'rut_paciente' => '14.892.301-5',
-            'nombre_paciente' => 'Carolina Rojas Soto',
+            'rut_paciente' => '12.345.678-5',
+            'nombre_paciente' => 'María Alejandra González',
             'rut_medico' => '9.412.880-2',
             'nombre_medico' => 'Dr. Roberto Valdés (Psiquiatría)',
             'numero_receta' => 'REC-CHQ-00481',
             'cantidad_dispensada' => 2,
         ]);
 
-        $tbk3 = PosController::calcularTarifaTransbank(14000, 'credito');
+        $tbk3 = PosController::calcularTarifaTransbank(11529, 'credito');
         $v3 = Venta::create([
             'convenio_id' => $convAdulto->id,
+            'rut_cliente' => '9.876.543-3',
             'subtotal' => 16470,
-            'descuento' => 2470,
-            'total' => 14000,
+            'descuento' => 4941,
+            'total' => 11529,
             'metodo_pago' => 'credito',
             'tasa_transbank' => $tbk3['tasa_transbank'],
             'comision_transbank' => $tbk3['comision_transbank'],

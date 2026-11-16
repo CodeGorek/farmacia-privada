@@ -5,15 +5,15 @@
     <!-- Encabezado del Módulo POS -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Carrito Multi-Producto & FEFO</h2>
-            <p class="text-muted mb-0">Escanea múltiples productos con tu lector de código de barras para armar la lista de compra antes de cobrar en Transbank.</p>
+            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Carrito, Switch RUT & Webpay</h2>
+            <p class="text-muted mb-0">Escanea productos, valida el <strong>RUT del paciente en el Switch de Convenios</strong> (descuento selectivo por vademécum) y cobra en Transbank.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
-                <i class="bi bi-credit-card-2-front me-1"></i>Pasarela Pago con Tarjeta Webpay / Redcompra Activa
+            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-3 py-2 rounded-pill fw-semibold">
+                <i class="bi bi-person-vcard-fill me-1"></i>Switch Aprobador RUT (I-Med) Activo
             </span>
-            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
-                <span class="scanner-dot me-2"></span>Escáner HID Global Escuchando
+            <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
+                <i class="bi bi-credit-card-2-front me-1"></i>Pasarela Tarjeta Webpay Activa
             </span>
         </div>
     </div>
@@ -46,7 +46,7 @@
     @endif
 
     <div class="row g-4">
-        <!-- Columna Izquierda: Lector de Código de Barras + Lista de Productos (Carrito POS) -->
+        <!-- Columna Izquierda: Lector de Código de Barras + Switch Aprobador RUT + Lista de Productos -->
         <div class="col-lg-7">
             <!-- 1. Módulo Lector de Código de Barras Real -->
             <div class="scanner-box p-4 mb-4">
@@ -114,7 +114,63 @@
                 </div>
             </div>
 
-            <!-- 2. LISTA DE PRODUCTOS DE LA VENTA ACTUAL (CARRITO MULTI-PRODUCTO) -->
+            <!-- 2. SWITCH APROBADOR DE CONVENIOS EN LÍNEA POR RUT (I-MED / ISAPRE / FONASA) -->
+            <div class="card-pro mb-4 border-primary border-opacity-25">
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"
+                     style="background: linear-gradient(90deg, #EFF6FF 0%, #F8FAFC 100%);">
+                    <div class="d-flex align-items-center gap-2 text-primary">
+                        <i class="bi bi-person-vcard-fill fs-5"></i>
+                        <span class="fw-extrabold">Switch Aprobador de Convenios por RUT (Cobertura por Vademécum)</span>
+                    </div>
+                    <span id="badgeSwitchStatus" class="badge bg-secondary-subtle text-secondary rounded-pill">
+                        Sin RUT validado (Tarifa Particular)
+                    </span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center mb-2">
+                        <div class="col-sm-7">
+                            <div class="input-group">
+                                <span class="input-group-text bg-primary text-white border-0"><i class="bi bi-person-badge"></i></span>
+                                <input type="text"
+                                       id="inputRutSwitch"
+                                       class="form-control font-mono fw-bold"
+                                       placeholder="Ingresa RUT del cliente (ej. 12.345.678-5)..."
+                                       autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-sm-5 d-flex gap-1">
+                            <button type="button" id="btnValidarRutSwitch" class="btn btn-primary fw-bold flex-grow-1">
+                                <i class="bi bi-shield-check me-1"></i>Validar Beneficio RUT
+                            </button>
+                            <button type="button" id="btnQuitarRutSwitch" class="btn btn-outline-secondary" title="Quitar convenio / Volver a Particular">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Botones rápidos de RUTs de prueba para demostrar distintos escenarios -->
+                    <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
+                        <span class="text-muted small me-1"><i class="bi bi-lightning-charge-fill text-warning"></i> Probar RUT:</span>
+                        <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 small font-mono btn-test-rut" data-rut="12.345.678-5">
+                            12.345.678-5 (Isapre: cubre Losartán/Amox/Clonaz, NO Paracetamol)
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 small font-mono btn-test-rut" data-rut="9.876.543-3">
+                            9.876.543-3 (Adulto Mayor: cubre Paracetamol -15% y Losartán -30%)
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 small font-mono btn-test-rut" data-rut="15.222.333-4">
+                            15.222.333-4 (Rechazado por Mora)
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-2 small font-mono btn-test-rut" data-rut="18.999.111-2">
+                            18.999.111-2 (Sin Convenio)
+                        </button>
+                    </div>
+
+                    <!-- Respuesta en vivo del Switch Aprobador -->
+                    <div id="switchResultadoBox" class="mt-3 d-none"></div>
+                </div>
+            </div>
+
+            <!-- 3. LISTA DE PRODUCTOS DE LA VENTA ACTUAL (CARRITO MULTI-PRODUCTO) -->
             <div class="card-pro">
                 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div class="d-flex align-items-center gap-2">
@@ -137,10 +193,10 @@
                         <table class="table table-hover mb-0 align-middle">
                             <thead class="table-light text-muted small text-uppercase">
                                 <tr>
-                                    <th>Medicamento / Lotes FEFO a descontar</th>
+                                    <th>Medicamento / Lotes FEFO & Cobertura Convenio</th>
                                     <th class="text-end">P. Unitario</th>
                                     <th class="text-center" style="width: 140px;">Cantidad</th>
-                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Subtotal Línea</th>
                                     <th class="text-center" style="width: 50px;"></th>
                                 </tr>
                             </thead>
@@ -157,21 +213,17 @@
                     </div>
                 </div>
 
-                <!-- Pie del Carrito: Convenio, Medio de Pago, Receta Controlada y Totales -->
+                <!-- Pie del Carrito: Medio de Pago, Receta Controlada y Totales -->
                 <div class="card-body p-4 border-top bg-light bg-opacity-50">
                     <form id="posForm">
                         @csrf
+                        <input type="hidden" name="convenio_id" id="convenio_id" value="">
+                        <input type="hidden" name="rut_cliente" id="rut_cliente" value="">
+
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold small">Convenio / Beneficio de Salud</label>
-                                <select name="convenio_id" id="convenio_id" class="form-select">
-                                    <option value="" data-descuento="0">Particular (0% Dcto.)</option>
-                                    @foreach($convenios as $conv)
-                                        <option value="{{ $conv->id }}" data-descuento="{{ $conv->porcentaje_descuento }}">
-                                            {{ $conv->nombre }} (-{{ number_format($conv->porcentaje_descuento, 0) }}%)
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <label class="form-label fw-bold small">Convenio Aplicado por Switch RUT</label>
+                                <input type="text" id="txtConvenioActivoInput" class="form-control bg-white fw-semibold" value="Particular (0% Dcto. — Valida RUT arriba)" readonly>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-bold small">Medio de Pago</label>
@@ -184,7 +236,7 @@
                             </div>
                         </div>
 
-                        <!-- Bloque de Receta Controlada (se activa si algún producto de la lista es controlado) -->
+                        <!-- Bloque de Receta Controlada -->
                         <div id="bloqueControlado" class="border border-warning border-2 rounded-4 p-3 mb-3 bg-warning-subtle d-none">
                             <div class="d-flex align-items-center gap-2 mb-2 text-dark fw-bold">
                                 <i class="bi bi-journal-medical fs-5 text-danger"></i>
@@ -193,11 +245,11 @@
                             <div class="row g-2">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Paciente</label>
-                                    <input type="text" name="rut_paciente" class="form-control form-control-sm" placeholder="12.345.678-9">
+                                    <input type="text" name="rut_paciente" id="inputRutPacienteCtrl" class="form-control form-control-sm" placeholder="12.345.678-9">
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label small fw-semibold mb-1">Nombre Completo Paciente</label>
-                                    <input type="text" name="nombre_paciente" class="form-control form-control-sm" placeholder="Nombre y Apellidos del comprador">
+                                    <input type="text" name="nombre_paciente" id="inputNombrePacienteCtrl" class="form-control form-control-sm" placeholder="Nombre y Apellidos del comprador">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Médico Prescriptor</label>
@@ -222,16 +274,16 @@
                                         Unidades totales a dispensar: <strong id="txtUnidadesTotales" class="text-dark">0 u.</strong>
                                     </div>
                                     <div class="small text-muted">
-                                        Todos los productos descuentan stock automáticamente según fecha de vencimiento <strong>FEFO</strong>.
+                                        El descuento del convenio se aplica <strong>solo a los medicamentos adheridos</strong> a su vademécum.
                                     </div>
                                 </div>
                                 <div class="col-md-6 text-md-end border-start-md ps-md-3">
                                     <div class="d-flex justify-content-between small text-muted">
-                                        <span>Subtotal Lista:</span>
+                                        <span>Subtotal Bruto Lista:</span>
                                         <span id="txtSubtotal" class="font-mono">$0</span>
                                     </div>
-                                    <div class="d-flex justify-content-between small text-success">
-                                        <span>Descuento Convenio:</span>
+                                    <div class="d-flex justify-content-between small text-success fw-semibold">
+                                        <span>Bonificación Productos en Convenio:</span>
                                         <span id="txtDescuento" class="font-mono">-$0</span>
                                     </div>
                                     <hr class="my-1">
@@ -431,7 +483,6 @@
         </div>
     </div>
 
-    <!-- Formulario oculto para redirección POST a Webpay Plus Sandbox oficial -->
     <form id="webpayRedirectForm" method="POST" action="" class="d-none">
         <input type="hidden" name="token_ws" id="webpayTokenInput" value="">
     </form>
@@ -461,11 +512,21 @@
 @push('scripts')
 <script>
 (function () {
-    // Catálogo de medicamentos inyectado desde el servidor
     const CATALOGO = @json($catalogoPosJson);
 
-    // Estado del Carrito Multi-Producto: Array de { med, cantidad }
+    // Estado del Carrito Multi-Producto
     let carrito = [];
+
+    // Estado del Switch Aprobador de Convenios por RUT:
+    // coberturaActiva es un mapa { medicamento_id: porcentaje_descuento }
+    let convenioSwitch = {
+        activo: false,
+        rut: '',
+        nombre_afiliado: '',
+        convenio_id: null,
+        convenio_nombre: 'Particular (0% Dcto.)',
+        cobertura: {}
+    };
 
     const scannerInput = document.getElementById('barcodeScannerInput');
     const feedbackBadge = document.getElementById('scannerFeedbackBadge');
@@ -475,7 +536,6 @@
     const btnVaciarCarrito = document.getElementById('btnVaciarCarrito');
     const bloqueControlado = document.getElementById('bloqueControlado');
     const badgeControladoHeader = document.getElementById('badgeControladoHeader');
-    const selectConv = document.getElementById('convenio_id');
     const selectMetodo = document.getElementById('metodo_pago');
     const txtUnidadesTotales = document.getElementById('txtUnidadesTotales');
     const txtSubtotal = document.getElementById('txtSubtotal');
@@ -483,10 +543,21 @@
     const txtTotal = document.getElementById('txtTotal');
     const tbkCardAmountBadge = document.getElementById('tbkCardAmountBadge');
 
+    // Inputs ocultos / visibles de Convenio por RUT
+    const hiddenConvenioId = document.getElementById('convenio_id');
+    const hiddenRutCliente = document.getElementById('rut_cliente');
+    const txtConvenioActivoInput = document.getElementById('txtConvenioActivoInput');
+    const inputRutSwitch = document.getElementById('inputRutSwitch');
+    const badgeSwitchStatus = document.getElementById('badgeSwitchStatus');
+    const switchResultadoBox = document.getElementById('switchResultadoBox');
+    const inputRutPacienteCtrl = document.getElementById('inputRutPacienteCtrl');
+    const inputNombrePacienteCtrl = document.getElementById('inputNombrePacienteCtrl');
+
     // Elementos del Simulador de Pago con Tarjeta
     const visualCardBox = document.getElementById('visualCardBox');
     const visualCardBrand = document.getElementById('visualCardBrand');
     const visualCardNumber = document.getElementById('visualCardNumber');
+    const visualCardHolder = document.getElementById('visualCardHolder');
     const visualCardExpiry = document.getElementById('visualCardExpiry');
     const tbkInputNumber = document.getElementById('tbkInputNumber');
     const tbkInputExp = document.getElementById('tbkInputExp');
@@ -496,7 +567,6 @@
 
     const formatCLP = (val) => '$' + Math.round(val || 0).toLocaleString('es-CL');
 
-    // Simula qué lotes FEFO se asignarán para un medicamento y cantidad dada
     function calcularBadgesLotesFefo(med, cantidad) {
         let restante = cantidad;
         const badges = [];
@@ -513,7 +583,6 @@
         return badges.join(' ');
     }
 
-    // Renderizar la tabla de la Lista de Productos (Carrito POS) y recalcular totales
     function renderizarCarrito() {
         if (carrito.length === 0) {
             tbodyCarritoPos.innerHTML = `
@@ -539,27 +608,61 @@
 
         btnVaciarCarrito.classList.remove('d-none');
         let subtotalGlobal = 0;
+        let descuentoGlobal = 0;
         let unidadesTotales = 0;
         let hayControlado = false;
 
         tbodyCarritoPos.innerHTML = carrito.map((item, idx) => {
             const med = item.med;
             const cant = item.cantidad;
-            const sub = med.precio * cant;
-            subtotalGlobal += sub;
+            const subBruto = med.precio * cant;
+            subtotalGlobal += subBruto;
             unidadesTotales += cant;
             if (med.controlado) hayControlado = true;
+
+            // Verificar si este medicamento específico está cubierto por el convenio del RUT activo
+            const pctCobertura = convenioSwitch.activo && convenioSwitch.cobertura[med.id] !== undefined
+                ? parseFloat(convenioSwitch.cobertura[med.id])
+                : 0;
+            const dctoLinea = pctCobertura > 0 ? Math.round(subBruto * (pctCobertura / 100)) : 0;
+            const subFinalLinea = subBruto - dctoLinea;
+            descuentoGlobal += dctoLinea;
+
+            let badgeCoberturaHtml = '';
+            if (convenioSwitch.activo) {
+                if (pctCobertura > 0) {
+                    badgeCoberturaHtml = `
+                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">
+                            <i class="bi bi-check-circle-fill me-1"></i>Cubierto por ${convenioSwitch.convenio_nombre} (-${pctCobertura}%: -${formatCLP(dctoLinea)})
+                        </span>
+                    `;
+                } else {
+                    badgeCoberturaHtml = `
+                        <span class="badge bg-secondary-subtle text-secondary border ms-1">
+                            <i class="bi bi-dash-circle me-1"></i>No adherido a este convenio ($0 dcto)
+                        </span>
+                    `;
+                }
+            }
 
             const badgeCtrl = med.controlado
                 ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.68rem;">⚠️ CONTROLADO</span>`
                 : '';
+
+            const subtotalColHtml = dctoLinea > 0
+                ? `<div class="text-decoration-line-through text-muted small font-mono">${formatCLP(subBruto)}</div>
+                   <div class="font-mono fw-extrabold text-success">${formatCLP(subFinalLinea)}</div>`
+                : `<div class="font-mono fw-extrabold text-primary">${formatCLP(subBruto)}</div>`;
 
             return `
                 <tr>
                     <td>
                         <div class="fw-bold">${med.nombre} ${badgeCtrl}</div>
                         <div class="text-muted small font-mono mb-1"><i class="bi bi-upc me-1"></i>${med.codigo} • Stock vitrina: ${med.stock} u.</div>
-                        <div>${calcularBadgesLotesFefo(med, cant)}</div>
+                        <div class="d-flex flex-wrap gap-1 align-items-center">
+                            ${calcularBadgesLotesFefo(med, cant)}
+                            ${badgeCoberturaHtml}
+                        </div>
                     </td>
                     <td class="text-end font-mono fw-semibold">${formatCLP(med.precio)}</td>
                     <td class="text-center">
@@ -569,7 +672,7 @@
                             <button type="button" class="btn btn-outline-secondary btn-cant-mas" data-idx="${idx}"><i class="bi bi-plus"></i></button>
                         </div>
                     </td>
-                    <td class="text-end font-mono fw-extrabold text-primary">${formatCLP(sub)}</td>
+                    <td class="text-end">${subtotalColHtml}</td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-quitar-fila" data-idx="${idx}" title="Quitar de la lista">
                             <i class="bi bi-trash3-fill"></i>
@@ -585,17 +688,13 @@
         bloqueControlado.classList.toggle('d-none', !hayControlado);
         badgeControladoHeader.classList.toggle('d-none', !hayControlado);
 
-        const convOpt = selectConv.options[selectConv.selectedIndex];
-        const pctDescuento = parseFloat((convOpt && convOpt.dataset.descuento) || '0');
-        const descuento = Math.round(subtotalGlobal * (pctDescuento / 100));
-        const total = Math.max(0, subtotalGlobal - descuento);
+        const total = Math.max(0, subtotalGlobal - descuentoGlobal);
 
         txtSubtotal.textContent = formatCLP(subtotalGlobal);
-        txtDescuento.textContent = '-' + formatCLP(descuento);
+        txtDescuento.textContent = '-' + formatCLP(descuentoGlobal);
         txtTotal.textContent = formatCLP(total);
         tbkCardAmountBadge.textContent = formatCLP(total);
 
-        // Eventos de botones +/-/eliminar dentro de la tabla
         tbodyCarritoPos.querySelectorAll('.btn-cant-menos').forEach(btn => {
             btn.addEventListener('click', function () {
                 const i = parseInt(this.dataset.idx, 10);
@@ -634,7 +733,126 @@
         });
     }
 
-    // Agregar o incrementar un medicamento en la lista por su código de barras
+    // Consultar el Switch Aprobador de Convenios por RUT en el servidor
+    async function consultarRutEnSwitch(rutRaw) {
+        const rut = (rutRaw || '').trim();
+        if (!rut) return;
+
+        inputRutSwitch.value = rut;
+        switchResultadoBox.className = 'mt-3 p-2 rounded-3 bg-info-subtle border border-info small d-flex align-items-center gap-2';
+        switchResultadoBox.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div><span>Consultando Switch Aprobador de Convenios en línea...</span>';
+
+        try {
+            const res = await fetch('{{ route("pos.validar-rut") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ rut })
+            });
+            const data = await res.json();
+
+            if (data.tiene_beneficio) {
+                window.playScannerBeep(true);
+                convenioSwitch = {
+                    activo: true,
+                    rut: data.rut,
+                    nombre_afiliado: data.nombre_afiliado,
+                    convenio_id: data.convenio_id,
+                    convenio_nombre: data.convenio_nombre,
+                    cobertura: data.cobertura_medicamentos || {}
+                };
+
+                hiddenConvenioId.value = data.convenio_id;
+                hiddenRutCliente.value = data.rut;
+                txtConvenioActivoInput.value = `${data.convenio_nombre} — Afiliado: ${data.nombre_afiliado} [${data.rut}]`;
+                visualCardHolder.textContent = data.nombre_afiliado.toUpperCase();
+                inputRutPacienteCtrl.value = data.rut;
+                inputNombrePacienteCtrl.value = data.nombre_afiliado;
+
+                badgeSwitchStatus.className = 'badge bg-success text-white rounded-pill';
+                badgeSwitchStatus.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>APROBADO • ${data.codigo_switch}`;
+
+                const numCubiertos = Object.keys(convenioSwitch.cobertura).length;
+                switchResultadoBox.className = 'mt-3 p-3 rounded-3 bg-success-subtle border border-success small text-dark';
+                switchResultadoBox.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
+                        <strong><i class="bi bi-check-circle-fill text-success me-1"></i>${data.convenio_nombre} — APROBADO EN LÍNEA</strong>
+                        <span class="badge bg-dark font-mono">Aut. Switch: ${data.codigo_switch}</span>
+                    </div>
+                    <div>Paciente: <strong>${data.nombre_afiliado}</strong> (<code class="font-mono">${data.rut}</code>) • <strong>${numCubiertos} medicamentos</strong> asociados al vademécum de este convenio.</div>
+                `;
+            } else {
+                window.playScannerBeep(false);
+                convenioSwitch = {
+                    activo: false,
+                    rut: data.rut || rut,
+                    nombre_afiliado: data.nombre_afiliado || '',
+                    convenio_id: null,
+                    convenio_nombre: 'Particular (0% Dcto.)',
+                    cobertura: {}
+                };
+                hiddenConvenioId.value = '';
+                hiddenRutCliente.value = data.rut || rut;
+                txtConvenioActivoInput.value = `Sin Convenio Activo (${data.estado_switch === 'RECHAZADO_MORA' ? 'Rechazado por Mora' : 'Tarifa Particular 0%'})`;
+
+                if (data.estado_switch === 'RECHAZADO_MORA') {
+                    badgeSwitchStatus.className = 'badge bg-danger text-white rounded-pill';
+                    badgeSwitchStatus.innerHTML = `<i class="bi bi-x-octagon-fill me-1"></i>RECHAZADO POR MORA`;
+                    switchResultadoBox.className = 'mt-3 p-3 rounded-3 bg-danger-subtle border border-danger small text-danger-emphasis';
+                } else {
+                    badgeSwitchStatus.className = 'badge bg-secondary text-white rounded-pill';
+                    badgeSwitchStatus.innerHTML = `<i class="bi bi-info-circle me-1"></i>SIN CONVENIO (PARTICULAR)`;
+                    switchResultadoBox.className = 'mt-3 p-3 rounded-3 bg-secondary-subtle border border-secondary small text-dark';
+                }
+                switchResultadoBox.innerHTML = `<strong>${data.estado_switch}:</strong> ${data.mensaje}`;
+            }
+
+            renderizarCarrito();
+        } catch (err) {
+            switchResultadoBox.className = 'mt-3 p-2 rounded-3 bg-danger-subtle text-danger small';
+            switchResultadoBox.textContent = 'Error al consultar el Switch Aprobador de Convenios.';
+        }
+    }
+
+    document.getElementById('btnValidarRutSwitch').addEventListener('click', function () {
+        consultarRutEnSwitch(inputRutSwitch.value);
+    });
+
+    inputRutSwitch.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            consultarRutEnSwitch(this.value);
+        }
+    });
+
+    document.querySelectorAll('.btn-test-rut').forEach(btn => {
+        btn.addEventListener('click', function () {
+            consultarRutEnSwitch(this.dataset.rut);
+        });
+    });
+
+    document.getElementById('btnQuitarRutSwitch').addEventListener('click', function () {
+        convenioSwitch = {
+            activo: false,
+            rut: '',
+            nombre_afiliado: '',
+            convenio_id: null,
+            convenio_nombre: 'Particular (0% Dcto.)',
+            cobertura: {}
+        };
+        inputRutSwitch.value = '';
+        hiddenConvenioId.value = '';
+        hiddenRutCliente.value = '';
+        txtConvenioActivoInput.value = 'Particular (0% Dcto. — Valida RUT arriba)';
+        badgeSwitchStatus.className = 'badge bg-secondary-subtle text-secondary rounded-pill';
+        badgeSwitchStatus.textContent = 'Sin RUT validado (Tarifa Particular)';
+        switchResultadoBox.className = 'mt-3 d-none';
+        renderizarCarrito();
+    });
+
     function procesarCodigoDeBarras(codigoRaw) {
         const codigo = (codigoRaw || '').trim();
         if (!codigo) return;
@@ -669,7 +887,6 @@
         }
     });
 
-    // Listener Global para pistola lectora USB/Bluetooth HID
     let hidBuffer = '';
     let lastKeyTime = 0;
     document.addEventListener('keydown', function (e) {
@@ -718,10 +935,8 @@
         });
     });
 
-    selectConv.addEventListener('change', renderizarCarrito);
     selectMetodo.addEventListener('change', renderizarCarrito);
 
-    // Sincronizar tarjeta 3D
     tbkInputNumber.addEventListener('input', function () {
         visualCardNumber.textContent = this.value || '•••• •••• •••• ••••';
     });
@@ -767,7 +982,6 @@
         return base;
     }
 
-    // Cobrar toda la lista en el Simulador de Tarjeta y ejecutar el descuento FEFO
     async function ejecutarPagoConSimuladorTarjeta() {
         const resultadoDiv = document.getElementById('resultadoVenta');
         if (carrito.length === 0) {
@@ -825,7 +1039,7 @@
                 resultadoDiv.className = 'mt-3 alert alert-success border-success shadow-sm';
                 resultadoDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} (${carrito.length} productos) Procesada!</strong>
+                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} Procesada! (Ahorro Convenio: ${formatCLP(data.descuento || 0)})</strong>
                         <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
                     </div>
                     <div class="mt-2 p-2 rounded-3 bg-white border small text-dark">

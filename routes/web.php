@@ -9,6 +9,7 @@ Route::get('/dashboard/realtime', [PosController::class, 'dashboardRealtime'])->
 
 Route::prefix('pos')->name('pos.')->group(function () {
     Route::get('/', [PosController::class, 'index'])->name('index');
+    Route::post('/validar-rut-convenio', [PosController::class, 'validarRutConvenio'])->name('validar-rut');
     Route::post('/procesar-venta', [PosController::class, 'procesarVenta'])->name('procesar');
     Route::post('/webpay/iniciar', [PosController::class, 'iniciarWebpay'])->name('webpay.iniciar');
     Route::match(['get', 'post'], '/webpay/retorno', [PosController::class, 'retornoWebpay'])->name('webpay.retorno');

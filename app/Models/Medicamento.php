@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Medicamento extends Model
@@ -31,6 +32,13 @@ class Medicamento extends Model
     public function lotes(): HasMany
     {
         return $this->hasMany(Lote::class)->orderBy('fecha_vencimiento', 'asc');
+    }
+
+    public function convenios(): BelongsToMany
+    {
+        return $this->belongsToMany(Convenio::class, 'convenio_medicamento')
+            ->withPivot('porcentaje_descuento')
+            ->withTimestamps();
     }
 
     public function getStockTotalVitrinaAttribute(): int

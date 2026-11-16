@@ -14,6 +14,7 @@ class Venta extends Model
     protected $fillable = [
         'user_id',
         'convenio_id',
+        'rut_cliente',
         'subtotal',
         'descuento',
         'total',

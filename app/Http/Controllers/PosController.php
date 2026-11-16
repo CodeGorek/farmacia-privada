@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Lote;
 use App\Models\Medicamento;
 use App\Models\Convenio;
+use App\Models\AfiliadoConvenio;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
 use App\Models\LibroControlado;
@@ -57,9 +58,102 @@ class PosController extends Controller
     }
 
     /**
-     * Normaliza la entrada para soportar tanto un carrito multi-producto (items[])
-     * como una venta individual (medicamento_id, cantidad).
+     * Switch Aprobador de Convenios en Línea por RUT (POST /pos/validar-rut-convenio)
+     * Devuelve el convenio del afiliado y el mapa exacto de medicamentos cubiertos (vademécum).
      */
+    public function validarRutConvenio(Request $request)
+    {
+        $request->validate([
+            'rut' => 'required|string|max:25',
+        ]);
+
+        $rutNorm = AfiliadoConvenio::normalizarRut($request->rut);
+        $rutFormateado = AfiliadoConvenio::formatearRut($rutNorm);
+
+        $afiliado = AfiliadoConvenio::with(['convenio.medicamentos'])
+            ->where('rut', $rutNorm)
+            ->first();
+
+        if (!$afiliado || !$afiliado->convenio) {
+            return response()->json([
+                'status' => 'ok',
+                'tiene_beneficio' => false,
+                'estado_switch' => 'SIN_CONVENIO',
+                'rut' => $rutFormateado,
+                'nombre_afiliado' => 'Cliente Particular (No afiliado)',
+                'convenio_id' => null,
+                'convenio_nombre' => 'Particular (0% Dcto.)',
+                'codigo_switch' => null,
+                'mensaje' => 'El RUT consultado no registra convenios activos. Se aplica tarifa Particular (0% descuento).',
+                'cobertura_medicamentos' => (object) [],
+            ]);
+        }
+
+        if ($afiliado->estado !== 'ACTIVO' || !$afiliado->convenio->activo) {
+            return response()->json([
+                'status' => 'ok',
+                'tiene_beneficio' => false,
+                'estado_switch' => 'RECHAZADO_MORA',
+                'rut' => $rutFormateado,
+                'nombre_afiliado' => $afiliado->nombre_afiliado,
+                'convenio_id' => null,
+                'convenio_nombre' => $afiliado->convenio->nombre,
+                'codigo_switch' => 'ERR-MORA-403',
+                'mensaje' => "Beneficio RECHAZADO por {$afiliado->convenio->nombre}: Afiliado con suspensión o mora vigente. No se aplican descuentos.",
+                'cobertura_medicamentos' => (object) [],
+            ]);
+        }
+
+        // Construir mapa { medicamento_id: porcentaje_descuento } solo para los medicamentos adheridos al convenio
+        $cobertura = [];
+        foreach ($afiliado->convenio->medicamentos as $medCubierto) {
+            $pct = $medCubierto->pivot->porcentaje_descuento !== null
+                ? (float) $medCubierto->pivot->porcentaje_descuento
+                : (float) $afiliado->convenio->porcentaje_descuento;
+            $cobertura[$medCubierto->id] = $pct;
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'tiene_beneficio' => true,
+            'estado_switch' => 'APROBADO',
+            'rut' => $rutFormateado,
+            'nombre_afiliado' => $afiliado->nombre_afiliado,
+            'convenio_id' => $afiliado->convenio->id,
+            'convenio_nombre' => $afiliado->convenio->nombre,
+            'codigo_switch' => 'IMED-' . mt_rand(100000, 999999),
+            'mensaje' => "Beneficio APROBADO en línea para {$afiliado->nombre_afiliado} ({$afiliado->convenio->nombre}). Descuento aplicado exclusivamente a los productos adheridos al vademécum.",
+            'cobertura_medicamentos' => $cobertura,
+        ]);
+    }
+
+    /**
+     * Obtiene el mapa { medicamento_id => %_descuento } para un convenio dado.
+     */
+    private function obtenerMapaVademecum(?int $convenioId): array
+    {
+        if (!$convenioId) {
+            return [];
+        }
+        $convenio = Convenio::with('medicamentos')->find($convenioId);
+        if (!$convenio || !$convenio->activo) {
+            return [];
+        }
+
+        // Si el convenio tiene medicamentos específicos asociados en convenio_medicamento, solo esos tienen descuento
+        if ($convenio->medicamentos->count() > 0) {
+            $mapa = [];
+            foreach ($convenio->medicamentos as $med) {
+                $mapa[$med->id] = $med->pivot->porcentaje_descuento !== null
+                    ? (float) $med->pivot->porcentaje_descuento
+                    : (float) $convenio->porcentaje_descuento;
+            }
+            return $mapa;
+        }
+
+        return [];
+    }
+
     private function normalizeCartItems(Request $request): array
     {
         if ($request->has('items') && is_array($request->input('items')) && count($request->input('items')) > 0) {
@@ -238,6 +332,7 @@ class PosController extends Controller
                     'folio' => '#' . str_pad($v->id, 4, '0', STR_PAD_LEFT),
                     'hora' => $v->created_at->format('H:i:s'),
                     'convenio' => $v->convenio->nombre ?? 'Particular',
+                    'rut_cliente' => $v->rut_cliente,
                     'metodo_pago' => strtoupper($v->metodo_pago),
                     'subtotal' => (float) $v->subtotal,
                     'descuento' => (float) $v->descuento,
@@ -258,20 +353,28 @@ class PosController extends Controller
 
     public function index()
     {
-        $medicamentos = Medicamento::with(['lotes' => function ($q) {
-            $q->where('stock_vitrina', '>', 0)->orderBy('fecha_vencimiento', 'asc');
-        }])->get();
+        $medicamentos = Medicamento::with([
+            'lotes' => function ($q) {
+                $q->where('stock_vitrina', '>', 0)->orderBy('fecha_vencimiento', 'asc');
+            },
+            'convenios'
+        ])->get();
 
-        $convenios = Convenio::where('activo', true)->get();
+        $convenios = Convenio::with('medicamentos')->where('activo', true)->get();
+        $afiliadosDemo = AfiliadoConvenio::with('convenio')->get();
 
-        return view('pos.index', compact('medicamentos', 'convenios'));
+        return view('pos.index', compact('medicamentos', 'convenios', 'afiliadosDemo'));
     }
 
     public function iniciarWebpay(Request $request)
     {
         $items = $this->normalizeCartItems($request);
+        $convenioId = $request->filled('convenio_id') ? (int) $request->convenio_id : null;
+        $mapaVademecum = $this->obtenerMapaVademecum($convenioId);
 
         $subtotal = 0;
+        $descuento = 0;
+
         foreach ($items as $item) {
             $med = Medicamento::findOrFail($item['medicamento_id']);
             $stockDisponible = Lote::where('medicamento_id', $med->id)->sum('stock_vitrina');
@@ -281,14 +384,11 @@ class PosController extends Controller
                     'message' => "Stock insuficiente en vitrina para {$med->nombre_comercial}.",
                 ], 422);
             }
-            $subtotal += (float) $med->precio_unitario * (int) $item['cantidad'];
-        }
+            $subLinea = (float) $med->precio_unitario * (int) $item['cantidad'];
+            $subtotal += $subLinea;
 
-        $descuento = 0;
-        if ($request->filled('convenio_id')) {
-            $conv = Convenio::find($request->convenio_id);
-            if ($conv && $conv->activo) {
-                $descuento = round($subtotal * ((float) $conv->porcentaje_descuento / 100));
+            if (isset($mapaVademecum[$med->id])) {
+                $descuento += round($subLinea * ($mapaVademecum[$med->id] / 100));
             }
         }
 
@@ -299,7 +399,8 @@ class PosController extends Controller
         session([
             'webpay_pending_sale' => [
                 'items' => $items,
-                'convenio_id' => $request->input('convenio_id'),
+                'convenio_id' => $convenioId,
+                'rut_cliente' => $request->input('rut_cliente'),
                 'metodo_pago' => $request->input('metodo_pago', 'credito'),
                 'rut_paciente' => $request->input('rut_paciente'),
                 'nombre_paciente' => $request->input('nombre_paciente'),
@@ -396,6 +497,7 @@ class PosController extends Controller
 
         $request->validate([
             'convenio_id' => 'nullable|integer|exists:convenios,id',
+            'rut_cliente' => 'nullable|string|max:25',
             'metodo_pago' => 'nullable|string|max:40',
             'rut_paciente' => 'nullable|string|max:20',
             'nombre_paciente' => 'nullable|string|max:150',
@@ -409,6 +511,10 @@ class PosController extends Controller
                 $lotesAplicadosGlobal = [];
                 $lineasProcesadas = [];
                 $subtotalGlobal = 0;
+                $descuentoGlobal = 0;
+
+                $convenioId = $request->filled('convenio_id') ? (int) $request->convenio_id : null;
+                $mapaVademecum = $this->obtenerMapaVademecum($convenioId);
 
                 foreach ($items as $cartItem) {
                     $medId = (int) $cartItem['medicamento_id'];
@@ -421,7 +527,7 @@ class PosController extends Controller
                     $lotes = Lote::where('medicamento_id', $medId)
                         ->where('stock_vitrina', '>', 0)
                         ->orderBy('fecha_vencimiento', 'asc')
-                        ->lockForUpdate() // Evita condiciones de carrera
+                        ->lockForUpdate()
                         ->get();
 
                     foreach ($lotes as $lote) {
@@ -456,18 +562,16 @@ class PosController extends Controller
                         throw new \Exception('Stock insuficiente en vitrina para ' . $medicamento->nombre_comercial);
                     }
 
-                    $subtotalGlobal += (float) $medicamento->precio_unitario * $cantidadSolicitada;
-                }
+                    $subItem = (float) $medicamento->precio_unitario * $cantidadSolicitada;
+                    $subtotalGlobal += $subItem;
 
-                $descuento = 0;
-                if ($request->filled('convenio_id')) {
-                    $convenio = Convenio::find($request->convenio_id);
-                    if ($convenio && $convenio->activo) {
-                        $descuento = round($subtotalGlobal * ((float) $convenio->porcentaje_descuento / 100), 2);
+                    // Descuento selectivo SOLO si este medicamento pertenece al vademécum del convenio
+                    if (isset($mapaVademecum[$medicamento->id])) {
+                        $descuentoGlobal += round($subItem * ($mapaVademecum[$medicamento->id] / 100));
                     }
                 }
 
-                $total = max(0, $subtotalGlobal - $descuento);
+                $total = max(0, $subtotalGlobal - $descuentoGlobal);
                 $metodoPago = $request->input('metodo_pago', 'efectivo');
                 $authCodeOverride = $request->input('codigo_autorizacion_tbk');
 
@@ -475,9 +579,10 @@ class PosController extends Controller
 
                 $venta = Venta::create([
                     'user_id' => auth()->id(),
-                    'convenio_id' => $request->convenio_id,
+                    'convenio_id' => $convenioId,
+                    'rut_cliente' => $request->input('rut_cliente'),
                     'subtotal' => $subtotalGlobal,
-                    'descuento' => $descuento,
+                    'descuento' => $descuentoGlobal,
                     'total' => $total,
                     'metodo_pago' => $metodoPago,
                     'tasa_transbank' => $tbk['tasa_transbank'],
@@ -504,7 +609,7 @@ class PosController extends Controller
                             'venta_id' => $venta->id,
                             'medicamento_id' => $linea['medicamento_id'],
                             'lote_id' => $linea['lote_id'],
-                            'rut_paciente' => $request->input('rut_paciente') ?: '15.432.987-K',
+                            'rut_paciente' => $request->input('rut_paciente') ?: ($request->input('rut_cliente') ?: '15.432.987-K'),
                             'nombre_paciente' => $request->input('nombre_paciente') ?: 'Paciente Controlado',
                             'rut_medico' => $request->input('rut_medico') ?: '10.222.333-4',
                             'nombre_medico' => $request->input('nombre_medico') ?: 'Dr. Médico Tratante',
@@ -517,13 +622,17 @@ class PosController extends Controller
                 try {
                     if (extension_loaded('mongodb')) {
                         AuditLog::create([
-                            'evento' => 'VENTA_CARRITO_FEFO_TBK',
+                            'evento' => 'VENTA_CARRITO_FEFO_TBK_CONVENIO',
                             'entidad' => 'Venta',
                             'entidad_id' => $venta->id,
                             'usuario_id' => auth()->id(),
                             'ip' => $request->ip(),
                             'payload' => [
                                 'items_count' => count($items),
+                                'rut_cliente' => $request->input('rut_cliente'),
+                                'convenio_id' => $convenioId,
+                                'subtotal' => $subtotalGlobal,
+                                'descuento' => $descuentoGlobal,
                                 'total' => $total,
                                 'transbank' => $tbk,
                                 'lotes_fefo' => $lotesAplicadosGlobal,
@@ -538,6 +647,8 @@ class PosController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'venta_id' => $venta->id,
+                    'subtotal' => $subtotalGlobal,
+                    'descuento' => $descuentoGlobal,
                     'total' => $total,
                     'transbank' => $tbk,
                     'lotes_fefo' => $lotesAplicadosGlobal,

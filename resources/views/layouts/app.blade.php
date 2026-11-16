@@ -211,6 +211,17 @@
         .table > :not(caption) > * > * {
             padding: 0.85rem 1rem;
         }
+
+        .input-cant-fila::-webkit-outer-spin-button,
+        .input-cant-fila::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .input-cant-fila {
+            -moz-appearance: textfield;
+            padding-left: 4px !important;
+            padding-right: 4px !important;
+        }
     </style>
 </head>
 <body>
