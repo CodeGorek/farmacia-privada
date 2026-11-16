@@ -5,8 +5,8 @@
     <!-- Encabezado del Módulo POS -->
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
         <div>
-            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Motor FEFO & Webpay</h2>
-            <p class="text-muted mb-0">Escanea con pistola lectora de código de barras y procesa el pago en el <strong>Simulador de Pago con Tarjeta Transbank (Webpay / Redcompra)</strong>.</p>
+            <h2 class="fw-extrabold mb-1"><i class="bi bi-upc-scan text-primary me-2"></i>Terminal Punto de Venta (POS) — Carrito Multi-Producto & FEFO</h2>
+            <p class="text-muted mb-0">Escanea múltiples productos con tu lector de código de barras para armar la lista de compra antes de cobrar en Transbank.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
@@ -46,15 +46,15 @@
     @endif
 
     <div class="row g-4">
-        <!-- Columna Izquierda: Lector de Código de Barras + Ficha de Dispensación -->
+        <!-- Columna Izquierda: Lector de Código de Barras + Lista de Productos (Carrito POS) -->
         <div class="col-lg-7">
-            <!-- Módulo Lector de Código de Barras Real -->
+            <!-- 1. Módulo Lector de Código de Barras Real -->
             <div class="scanner-box p-4 mb-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
                     <div class="d-flex align-items-center gap-2">
                         <span class="scanner-dot"></span>
                         <span class="fw-bold text-uppercase small tracking-wider" style="color: #34D399 !important;">
-                            Lector Láser / Código de Barras Activo (EAN-13 / Code128)
+                            Lector Láser / Código de Barras Activo (Agrega directo a la lista)
                         </span>
                     </div>
                     <span id="scannerFeedbackBadge" class="badge bg-white bg-opacity-10 text-white fw-normal">
@@ -69,7 +69,7 @@
                     <input type="text"
                            id="barcodeScannerInput"
                            class="form-control scanner-input"
-                           placeholder="Dispara el lector de código de barras aquí (ej. 780123456001) + Enter..."
+                           placeholder="Escanea cada producto aquí (ej. 780123456001) para sumarlo a la lista..."
                            autocomplete="off"
                            autofocus>
                     <button type="button" id="btnLimpiarScan" class="btn btn-outline-light px-3" title="Limpiar lector">
@@ -77,76 +77,93 @@
                     </button>
                 </div>
 
+                <!-- Búsqueda / Agregado Manual Rápido -->
+                <div class="row g-2 mt-2 align-items-center">
+                    <div class="col-sm-9">
+                        <select id="selectManualMed" class="form-select form-select-sm bg-dark text-white border-secondary">
+                            <option value="">-- O selecciona manualmente un medicamento para agregar a la lista --</option>
+                            @foreach($medicamentos as $med)
+                                <option value="{{ $med->codigo_barra }}">
+                                    [{{ $med->codigo_barra }}] {{ $med->nombre_comercial }} — ${{ number_format($med->precio_unitario, 0, ',', '.') }} (Stock: {{ $med->lotes->sum('stock_vitrina') }} u.)
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-sm-3 d-grid">
+                        <button type="button" id="btnAgregarManual" class="btn btn-sm btn-verde-medico fw-bold">
+                            <i class="bi bi-cart-plus me-1"></i>Agregar a Lista
+                        </button>
+                    </div>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2 border-top border-secondary border-opacity-25 gap-2">
                     <small class="text-white-50">
-                        <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
-                        <strong>Modo Continuo:</strong> Escanear el mismo código suma <code>+1</code> a la cantidad automáticamente.
+                        <i class="bi bi-cart-check-fill text-warning me-1"></i>
+                        Haz clic o escanea varios códigos para agregar distintos productos al carrito:
                     </small>
                     <div class="d-flex flex-wrap gap-1 align-items-center">
-                        <span class="text-white-50 small me-1">Probar código:</span>
                         @foreach($medicamentos as $med)
                             <button type="button"
                                     class="btn btn-sm btn-dark border border-secondary font-mono py-0 px-2 btn-simular-scan"
-                                    data-barcode="{{ $med->codigo_barra }}">
-                                <i class="bi bi-upc me-1 text-success"></i>{{ $med->codigo_barra }}
+                                    data-barcode="{{ $med->codigo_barra }}"
+                                    title="Agregar {{ $med->nombre_comercial }}">
+                                <i class="bi bi-plus-circle text-success me-1"></i>{{ $med->codigo_barra }}
                             </button>
                         @endforeach
                     </div>
                 </div>
             </div>
 
-            <!-- Tarjeta de Dispensación Farmacéutica -->
+            <!-- 2. LISTA DE PRODUCTOS DE LA VENTA ACTUAL (CARRITO MULTI-PRODUCTO) -->
             <div class="card-pro">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-bag-plus-fill text-primary me-2"></i>Ficha de Dispensación Farmacéutica</span>
-                    <span id="badgeControladoHeader" class="badge bg-warning text-dark d-none">
-                        <i class="bi bi-shield-exclamation me-1"></i>MEDICAMENTO CONTROLADO
-                    </span>
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-cart4 text-primary fs-5"></i>
+                        <span>Lista de Productos en esta Venta (Ticket Actual)</span>
+                        <span class="badge bg-primary rounded-pill" id="badgeTotalItems">0 ítems</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="badgeControladoHeader" class="badge bg-warning text-dark d-none">
+                            <i class="bi bi-shield-exclamation me-1"></i>CONTIENE CONTROLADOS
+                        </span>
+                        <button type="button" id="btnVaciarCarrito" class="btn btn-sm btn-outline-danger py-1 px-2 d-none">
+                            <i class="bi bi-trash3 me-1"></i>Vaciar Lista
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body p-4">
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Medicamento / Lotes FEFO a descontar</th>
+                                    <th class="text-end">P. Unitario</th>
+                                    <th class="text-center" style="width: 140px;">Cantidad</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-center" style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyCarritoPos">
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-upc-scan fs-1 d-block mb-2 text-secondary"></i>
+                                        <div class="fw-bold">La lista de venta está vacía</div>
+                                        <div class="small">Dispara el lector de códigos de barra o haz clic en los códigos de arriba para ir sumando productos.</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pie del Carrito: Convenio, Medio de Pago, Receta Controlada y Totales -->
+                <div class="card-body p-4 border-top bg-light bg-opacity-50">
                     <form id="posForm">
                         @csrf
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Medicamento Seleccionado</label>
-                            <select name="medicamento_id" id="medicamento_id" class="form-select form-select-lg" required>
-                                <option value="">-- Escanea un código o selecciona del catálogo --</option>
-                                @foreach($medicamentos as $med)
-                                    @php
-                                        $lotesJson = $med->lotes->map(fn($l) => [
-                                            'lote' => $l->numero_lote,
-                                            'vence' => $l->fecha_vencimiento->format('Y-m-d'),
-                                            'stock' => $l->stock_vitrina
-                                        ])->values();
-                                    @endphp
-                                    <option value="{{ $med->id }}"
-                                            data-codigo="{{ $med->codigo_barra }}"
-                                            data-nombre="{{ $med->nombre_comercial }}"
-                                            data-principio="{{ $med->principio_activo }}"
-                                            data-precio="{{ $med->precio_unitario }}"
-                                            data-controlado="{{ $med->es_controlado ? '1' : '0' }}"
-                                            data-receta="{{ $med->requiere_receta ? '1' : '0' }}"
-                                            data-stock="{{ $med->lotes->sum('stock_vitrina') }}"
-                                            data-lotes='@json($lotesJson)'>
-                                        [{{ $med->codigo_barra }}] {{ $med->nombre_comercial }} ({{ $med->principio_activo }})
-                                        — ${{ number_format($med->precio_unitario, 0, ',', '.') }}
-                                        — Vitrina: {{ $med->lotes->sum('stock_vitrina') }} u.
-                                        {{ $med->es_controlado ? ' ⚠️ [CONTROLADO]' : '' }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Cantidad a Dispensar</label>
-                                <div class="input-group">
-                                    <button type="button" class="btn btn-outline-secondary" id="btnRestarCant"><i class="bi bi-dash"></i></button>
-                                    <input type="number" name="cantidad" id="cantidad" class="form-control text-center fw-bold fs-5" min="1" value="1" required>
-                                    <button type="button" class="btn btn-outline-secondary" id="btnSumarCant"><i class="bi bi-plus"></i></button>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Convenio / Isapre</label>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Convenio / Beneficio de Salud</label>
                                 <select name="convenio_id" id="convenio_id" class="form-select">
                                     <option value="" data-descuento="0">Particular (0% Dcto.)</option>
                                     @foreach($convenios as $conv)
@@ -156,8 +173,8 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold">Medio de Pago</label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small">Medio de Pago</label>
                                 <select name="metodo_pago" id="metodo_pago" class="form-select fw-semibold">
                                     <option value="debito" selected>💳 Tarjeta Débito (Redcompra)</option>
                                     <option value="credito">💳 Tarjeta de Crédito (Webpay)</option>
@@ -167,8 +184,8 @@
                             </div>
                         </div>
 
-                        <!-- Bloque de Receta Controlada -->
-                        <div id="bloqueControlado" class="border border-warning border-2 rounded-4 p-3 mb-4 bg-warning-subtle d-none">
+                        <!-- Bloque de Receta Controlada (se activa si algún producto de la lista es controlado) -->
+                        <div id="bloqueControlado" class="border border-warning border-2 rounded-4 p-3 mb-3 bg-warning-subtle d-none">
                             <div class="d-flex align-items-center gap-2 mb-2 text-dark fw-bold">
                                 <i class="bi bi-journal-medical fs-5 text-danger"></i>
                                 <span>Registro Legal Obligatorio — Libro de Medicamentos Controlados</span>
@@ -197,20 +214,20 @@
                             </div>
                         </div>
 
-                        <!-- Resumen de Lotes FEFO y Total a Pagar -->
-                        <div class="rounded-4 p-3 mb-4 border" style="background-color: #F8FAFC;">
-                            <div class="row align-items-center g-3">
-                                <div class="col-md-7">
-                                    <div class="small fw-bold text-uppercase text-muted mb-1">
-                                        <i class="bi bi-layers-half text-primary me-1"></i>Asignación de Lotes por Vencimiento (FEFO):
+                        <!-- Totales Generales de la Lista -->
+                        <div class="rounded-4 p-3 mb-3 bg-white border shadow-sm">
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-6">
+                                    <div class="small text-muted">
+                                        Unidades totales a dispensar: <strong id="txtUnidadesTotales" class="text-dark">0 u.</strong>
                                     </div>
-                                    <div id="previewLotesFefo" class="small text-muted">
-                                        Selecciona o escanea un medicamento para previsualizar qué lotes se descontarán.
+                                    <div class="small text-muted">
+                                        Todos los productos descuentan stock automáticamente según fecha de vencimiento <strong>FEFO</strong>.
                                     </div>
                                 </div>
-                                <div class="col-md-5 text-md-end border-start-md ps-md-3">
+                                <div class="col-md-6 text-md-end border-start-md ps-md-3">
                                     <div class="d-flex justify-content-between small text-muted">
-                                        <span>Subtotal:</span>
+                                        <span>Subtotal Lista:</span>
                                         <span id="txtSubtotal" class="font-mono">$0</span>
                                     </div>
                                     <div class="d-flex justify-content-between small text-success">
@@ -226,11 +243,9 @@
                             </div>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" id="btnSubmitVenta" class="btn btn-verde-medico py-3 rounded-3 fw-bold fs-5">
-                                <i class="bi bi-credit-card-2-front me-2"></i>Cobrar en Simulador de Tarjeta Transbank (Webpay / Redcompra)
-                            </button>
-                        </div>
+                        <button type="submit" id="btnSubmitVenta" class="btn btn-verde-medico w-100 py-3 rounded-3 fw-bold fs-5">
+                            <i class="bi bi-credit-card-2-front me-2"></i>Cobrar Lista Completa en Simulador Transbank
+                        </button>
                     </form>
 
                     <div id="resultadoVenta" class="mt-3 d-none"></div>
@@ -251,7 +266,7 @@
                             <div class="text-white-50" style="font-size: 0.72rem;">Simulador de Pago con Tarjeta (Crédito / Redcompra)</div>
                         </div>
                     </div>
-                    <span class="badge bg-white text-dark font-mono fw-bold" id="tbkCardAmountBadge">$0</span>
+                    <span class="badge bg-white text-dark font-mono fw-bold fs-6" id="tbkCardAmountBadge">$0</span>
                 </div>
 
                 <div class="card-body p-3">
@@ -276,7 +291,7 @@
                             </div>
                             <div class="text-end">
                                 <div class="text-white-50" style="font-size: 0.65rem;">VENCE</div>
-                                <div class="fw-bold font-mono" id="visualCardExpiry">12/28</div>
+                                <div class="fw-bold font-mono" id="visualCardExpiry">10/29</div>
                             </div>
                         </div>
                     </div>
@@ -345,7 +360,6 @@
                         </div>
                     </div>
 
-                    <!-- Estado de Comunicación con el Banco Emisor -->
                     <div id="tbkPinpadStatus" class="rounded-3 p-2 bg-light border text-center small text-muted mb-3">
                         <i class="bi bi-shield-lock-fill text-success me-1"></i>Conexión cifrada TLS 1.3 lista con Transbank.
                     </div>
@@ -424,18 +438,46 @@
 </div>
 @endsection
 
+@php
+    $catalogoPosJson = $medicamentos->map(function ($med) {
+        return [
+            'id' => $med->id,
+            'codigo' => $med->codigo_barra,
+            'nombre' => $med->nombre_comercial,
+            'principio' => $med->principio_activo,
+            'precio' => (float) $med->precio_unitario,
+            'controlado' => (bool) $med->es_controlado,
+            'receta' => (bool) $med->requiere_receta,
+            'stock' => (int) $med->lotes->sum('stock_vitrina'),
+            'lotes' => $med->lotes->map(fn($l) => [
+                'lote' => $l->numero_lote,
+                'vence' => $l->fecha_vencimiento->format('d/m/Y'),
+                'stock' => (int) $l->stock_vitrina,
+            ])->values(),
+        ];
+    })->values();
+@endphp
+
 @push('scripts')
 <script>
 (function () {
-    const selectMed = document.getElementById('medicamento_id');
-    const inputCant = document.getElementById('cantidad');
-    const selectConv = document.getElementById('convenio_id');
-    const selectMetodo = document.getElementById('metodo_pago');
+    // Catálogo de medicamentos inyectado desde el servidor
+    const CATALOGO = @json($catalogoPosJson);
+
+    // Estado del Carrito Multi-Producto: Array de { med, cantidad }
+    let carrito = [];
+
     const scannerInput = document.getElementById('barcodeScannerInput');
     const feedbackBadge = document.getElementById('scannerFeedbackBadge');
+    const selectManualMed = document.getElementById('selectManualMed');
+    const tbodyCarritoPos = document.getElementById('tbodyCarritoPos');
+    const badgeTotalItems = document.getElementById('badgeTotalItems');
+    const btnVaciarCarrito = document.getElementById('btnVaciarCarrito');
     const bloqueControlado = document.getElementById('bloqueControlado');
     const badgeControladoHeader = document.getElementById('badgeControladoHeader');
-    const previewLotesFefo = document.getElementById('previewLotesFefo');
+    const selectConv = document.getElementById('convenio_id');
+    const selectMetodo = document.getElementById('metodo_pago');
+    const txtUnidadesTotales = document.getElementById('txtUnidadesTotales');
     const txtSubtotal = document.getElementById('txtSubtotal');
     const txtDescuento = document.getElementById('txtDescuento');
     const txtTotal = document.getElementById('txtTotal');
@@ -454,13 +496,40 @@
 
     const formatCLP = (val) => '$' + Math.round(val || 0).toLocaleString('es-CL');
 
-    function actualizarCalculosYPreview() {
-        const opt = selectMed.options[selectMed.selectedIndex];
+    // Simula qué lotes FEFO se asignarán para un medicamento y cantidad dada
+    function calcularBadgesLotesFefo(med, cantidad) {
+        let restante = cantidad;
+        const badges = [];
+        for (const l of (med.lotes || [])) {
+            if (restante <= 0) break;
+            if (l.stock <= 0) continue;
+            const tomar = Math.min(l.stock, restante);
+            badges.push(`<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono me-1">${l.lote}: ${tomar} u. (vence ${l.vence})</span>`);
+            restante -= tomar;
+        }
+        if (restante > 0) {
+            badges.push(`<span class="badge bg-danger text-white">Faltan ${restante} u. en vitrina</span>`);
+        }
+        return badges.join(' ');
+    }
 
-        if (!opt || !opt.value) {
+    // Renderizar la tabla de la Lista de Productos (Carrito POS) y recalcular totales
+    function renderizarCarrito() {
+        if (carrito.length === 0) {
+            tbodyCarritoPos.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <i class="bi bi-upc-scan fs-1 d-block mb-2 text-secondary"></i>
+                        <div class="fw-bold">La lista de venta está vacía</div>
+                        <div class="small">Dispara el lector de códigos de barra o haz clic en los códigos de arriba para ir sumando productos.</div>
+                    </td>
+                </tr>
+            `;
+            badgeTotalItems.textContent = '0 ítems';
+            btnVaciarCarrito.classList.add('d-none');
             bloqueControlado.classList.add('d-none');
             badgeControladoHeader.classList.add('d-none');
-            previewLotesFefo.innerHTML = 'Selecciona o escanea un medicamento para previsualizar qué lotes se descontarán.';
+            txtUnidadesTotales.textContent = '0 u.';
             txtSubtotal.textContent = '$0';
             txtDescuento.textContent = '-$0';
             txtTotal.textContent = '$0';
@@ -468,47 +537,191 @@
             return;
         }
 
-        const esControlado = opt.dataset.controlado === '1';
-        bloqueControlado.classList.toggle('d-none', !esControlado);
-        badgeControladoHeader.classList.toggle('d-none', !esControlado);
+        btnVaciarCarrito.classList.remove('d-none');
+        let subtotalGlobal = 0;
+        let unidadesTotales = 0;
+        let hayControlado = false;
 
-        const precio = parseFloat(opt.dataset.precio || '0');
-        const cantidad = Math.max(1, parseInt(inputCant.value || '1', 10));
+        tbodyCarritoPos.innerHTML = carrito.map((item, idx) => {
+            const med = item.med;
+            const cant = item.cantidad;
+            const sub = med.precio * cant;
+            subtotalGlobal += sub;
+            unidadesTotales += cant;
+            if (med.controlado) hayControlado = true;
+
+            const badgeCtrl = med.controlado
+                ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.68rem;">⚠️ CONTROLADO</span>`
+                : '';
+
+            return `
+                <tr>
+                    <td>
+                        <div class="fw-bold">${med.nombre} ${badgeCtrl}</div>
+                        <div class="text-muted small font-mono mb-1"><i class="bi bi-upc me-1"></i>${med.codigo} • Stock vitrina: ${med.stock} u.</div>
+                        <div>${calcularBadgesLotesFefo(med, cant)}</div>
+                    </td>
+                    <td class="text-end font-mono fw-semibold">${formatCLP(med.precio)}</td>
+                    <td class="text-center">
+                        <div class="input-group input-group-sm justify-content-center">
+                            <button type="button" class="btn btn-outline-secondary btn-cant-menos" data-idx="${idx}"><i class="bi bi-dash"></i></button>
+                            <input type="number" class="form-control text-center fw-bold input-cant-fila" data-idx="${idx}" value="${cant}" min="1" max="${med.stock}" style="max-width: 58px;">
+                            <button type="button" class="btn btn-outline-secondary btn-cant-mas" data-idx="${idx}"><i class="bi bi-plus"></i></button>
+                        </div>
+                    </td>
+                    <td class="text-end font-mono fw-extrabold text-primary">${formatCLP(sub)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger border-0 btn-quitar-fila" data-idx="${idx}" title="Quitar de la lista">
+                            <i class="bi bi-trash3-fill"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        badgeTotalItems.textContent = `${carrito.length} ${carrito.length === 1 ? 'producto' : 'productos'}`;
+        txtUnidadesTotales.textContent = `${unidadesTotales} u.`;
+
+        bloqueControlado.classList.toggle('d-none', !hayControlado);
+        badgeControladoHeader.classList.toggle('d-none', !hayControlado);
+
         const convOpt = selectConv.options[selectConv.selectedIndex];
         const pctDescuento = parseFloat((convOpt && convOpt.dataset.descuento) || '0');
+        const descuento = Math.round(subtotalGlobal * (pctDescuento / 100));
+        const total = Math.max(0, subtotalGlobal - descuento);
 
-        const subtotal = precio * cantidad;
-        const descuento = Math.round(subtotal * (pctDescuento / 100));
-        const total = Math.max(0, subtotal - descuento);
-
-        txtSubtotal.textContent = formatCLP(subtotal);
+        txtSubtotal.textContent = formatCLP(subtotalGlobal);
         txtDescuento.textContent = '-' + formatCLP(descuento);
         txtTotal.textContent = formatCLP(total);
         tbkCardAmountBadge.textContent = formatCLP(total);
 
-        // Simulación en vivo de lotes FEFO
-        try {
-            const lotes = JSON.parse(opt.dataset.lotes || '[]');
-            let restante = cantidad;
-            const asignados = [];
+        // Eventos de botones +/-/eliminar dentro de la tabla
+        tbodyCarritoPos.querySelectorAll('.btn-cant-menos').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const i = parseInt(this.dataset.idx, 10);
+                if (carrito[i].cantidad > 1) {
+                    carrito[i].cantidad--;
+                } else {
+                    carrito.splice(i, 1);
+                }
+                renderizarCarrito();
+            });
+        });
 
-            for (const l of lotes) {
-                if (restante <= 0) break;
-                if (l.stock <= 0) continue;
-                const tomar = Math.min(l.stock, restante);
-                asignados.push(`<span class="badge bg-primary-subtle text-primary border border-primary-subtle font-mono me-1 mb-1">${l.lote}: ${tomar} u. (vence ${l.vence})</span>`);
-                restante -= tomar;
-            }
+        tbodyCarritoPos.querySelectorAll('.btn-cant-mas').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const i = parseInt(this.dataset.idx, 10);
+                carrito[i].cantidad++;
+                renderizarCarrito();
+            });
+        });
 
-            if (restante > 0) {
-                previewLotesFefo.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-octagon-fill me-1"></i>Stock insuficiente en vitrina (faltan ${restante} u.).</span>`;
-            } else {
-                previewLotesFefo.innerHTML = asignados.join(' ') || '<span class="text-danger">Sin lotes disponibles</span>';
-            }
-        } catch (e) {}
+        tbodyCarritoPos.querySelectorAll('.input-cant-fila').forEach(inp => {
+            inp.addEventListener('change', function () {
+                const i = parseInt(this.dataset.idx, 10);
+                const val = Math.max(1, parseInt(this.value || '1', 10));
+                carrito[i].cantidad = val;
+                renderizarCarrito();
+            });
+        });
+
+        tbodyCarritoPos.querySelectorAll('.btn-quitar-fila').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const i = parseInt(this.dataset.idx, 10);
+                carrito.splice(i, 1);
+                renderizarCarrito();
+            });
+        });
     }
 
-    // Sincronizar tarjeta 3D cuando el usuario escribe o selecciona un preset de tarjeta de prueba
+    // Agregar o incrementar un medicamento en la lista por su código de barras
+    function procesarCodigoDeBarras(codigoRaw) {
+        const codigo = (codigoRaw || '').trim();
+        if (!codigo) return;
+
+        const med = CATALOGO.find(m => m.codigo === codigo);
+
+        if (med) {
+            window.playScannerBeep(true);
+            const existente = carrito.find(item => item.med.id === med.id);
+            if (existente) {
+                existente.cantidad += 1;
+            } else {
+                carrito.push({ med: med, cantidad: 1 });
+            }
+
+            feedbackBadge.className = 'badge bg-success text-white fw-semibold';
+            feedbackBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Agregado a la lista: ${med.nombre} [${codigo}]`;
+            scannerInput.value = '';
+            renderizarCarrito();
+        } else {
+            window.playScannerBeep(false);
+            feedbackBadge.className = 'badge bg-danger text-white fw-semibold';
+            feedbackBadge.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Código no registrado: ${codigo}`;
+            scannerInput.select();
+        }
+    }
+
+    scannerInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            e.preventDefault();
+            procesarCodigoDeBarras(this.value);
+        }
+    });
+
+    // Listener Global para pistola lectora USB/Bluetooth HID
+    let hidBuffer = '';
+    let lastKeyTime = 0;
+    document.addEventListener('keydown', function (e) {
+        const activeTag = document.activeElement ? document.activeElement.tagName : '';
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastKeyTime > 80) {
+            hidBuffer = '';
+        }
+        lastKeyTime = now;
+
+        if (e.key === 'Enter') {
+            if (hidBuffer.length >= 4) {
+                e.preventDefault();
+                procesarCodigoDeBarras(hidBuffer);
+                hidBuffer = '';
+            }
+        } else if (e.key.length === 1) {
+            hidBuffer += e.key;
+        }
+    });
+
+    document.getElementById('btnAgregarManual').addEventListener('click', function () {
+        if (selectManualMed.value) {
+            procesarCodigoDeBarras(selectManualMed.value);
+            selectManualMed.value = '';
+        }
+    });
+
+    document.getElementById('btnVaciarCarrito').addEventListener('click', function () {
+        carrito = [];
+        renderizarCarrito();
+    });
+
+    document.getElementById('btnLimpiarScan').addEventListener('click', function () {
+        scannerInput.value = '';
+        scannerInput.focus();
+    });
+
+    document.querySelectorAll('.btn-simular-scan').forEach(btn => {
+        btn.addEventListener('click', function () {
+            procesarCodigoDeBarras(this.dataset.barcode);
+        });
+    });
+
+    selectConv.addEventListener('change', renderizarCarrito);
+    selectMetodo.addEventListener('change', renderizarCarrito);
+
+    // Sincronizar tarjeta 3D
     tbkInputNumber.addEventListener('input', function () {
         visualCardNumber.textContent = this.value || '•••• •••• •••• ••••';
     });
@@ -535,119 +748,32 @@
                 tbkPinpadStatus.className = 'rounded-3 p-2 bg-success-subtle border border-success text-center small text-success fw-semibold mb-3';
                 tbkPinpadStatus.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Tarjeta de prueba Transbank (${this.dataset.brand}) lista para aprobar.`;
             }
-            actualizarCalculosYPreview();
+            renderizarCarrito();
         });
     });
-
-    // Procesar código de barras
-    function procesarCodigoDeBarras(codigoRaw) {
-        const codigo = (codigoRaw || '').trim();
-        if (!codigo) return;
-
-        let encontrado = null;
-        for (let i = 0; i < selectMed.options.length; i++) {
-            const opt = selectMed.options[i];
-            if (opt.dataset && opt.dataset.codigo === codigo) {
-                encontrado = opt;
-                break;
-            }
-        }
-
-        if (encontrado) {
-            window.playScannerBeep(true);
-            if (selectMed.value === encontrado.value) {
-                inputCant.value = parseInt(inputCant.value || '1', 10) + 1;
-            } else {
-                selectMed.value = encontrado.value;
-                inputCant.value = 1;
-            }
-
-            feedbackBadge.className = 'badge bg-success text-white fw-semibold';
-            feedbackBadge.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Escaneado: ${encontrado.dataset.nombre} [${codigo}]`;
-            scannerInput.value = '';
-            actualizarCalculosYPreview();
-        } else {
-            window.playScannerBeep(false);
-            feedbackBadge.className = 'badge bg-danger text-white fw-semibold';
-            feedbackBadge.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Código no registrado: ${codigo}`;
-            scannerInput.select();
-        }
-    }
-
-    scannerInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === 'Tab') {
-            e.preventDefault();
-            procesarCodigoDeBarras(this.value);
-        }
-    });
-
-    let hidBuffer = '';
-    let lastKeyTime = 0;
-    document.addEventListener('keydown', function (e) {
-        const activeTag = document.activeElement ? document.activeElement.tagName : '';
-        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
-            return;
-        }
-
-        const now = Date.now();
-        if (now - lastKeyTime > 80) {
-            hidBuffer = '';
-        }
-        lastKeyTime = now;
-
-        if (e.key === 'Enter') {
-            if (hidBuffer.length >= 4) {
-                e.preventDefault();
-                procesarCodigoDeBarras(hidBuffer);
-                hidBuffer = '';
-            }
-        } else if (e.key.length === 1) {
-            hidBuffer += e.key;
-        }
-    });
-
-    document.getElementById('btnLimpiarScan').addEventListener('click', function () {
-        scannerInput.value = '';
-        scannerInput.focus();
-    });
-
-    document.querySelectorAll('.btn-simular-scan').forEach(btn => {
-        btn.addEventListener('click', function () {
-            procesarCodigoDeBarras(this.dataset.barcode);
-        });
-    });
-
-    document.getElementById('btnRestarCant').addEventListener('click', function () {
-        const actual = parseInt(inputCant.value || '1', 10);
-        if (actual > 1) {
-            inputCant.value = actual - 1;
-            actualizarCalculosYPreview();
-        }
-    });
-
-    document.getElementById('btnSumarCant').addEventListener('click', function () {
-        const actual = parseInt(inputCant.value || '1', 10);
-        inputCant.value = actual + 1;
-        actualizarCalculosYPreview();
-    });
-
-    selectMed.addEventListener('change', actualizarCalculosYPreview);
-    inputCant.addEventListener('input', actualizarCalculosYPreview);
-    selectConv.addEventListener('change', actualizarCalculosYPreview);
-    selectMetodo.addEventListener('change', actualizarCalculosYPreview);
 
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('scan')) {
         procesarCodigoDeBarras(urlParams.get('scan'));
     }
 
-    // Función central para autorizar en el Simulador de Tarjeta y ejecutar el descuento FEFO
+    function construirPayloadCarrito() {
+        const formData = new FormData(document.getElementById('posForm'));
+        const base = Object.fromEntries(formData.entries());
+        base.items = carrito.map(i => ({
+            medicamento_id: i.med.id,
+            cantidad: i.cantidad
+        }));
+        return base;
+    }
+
+    // Cobrar toda la lista en el Simulador de Tarjeta y ejecutar el descuento FEFO
     async function ejecutarPagoConSimuladorTarjeta() {
         const resultadoDiv = document.getElementById('resultadoVenta');
-        if (!selectMed.value) {
+        if (carrito.length === 0) {
             window.playScannerBeep(false);
             resultadoDiv.className = 'mt-3 alert alert-warning';
-            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o selecciona un medicamento para cobrar.';
+            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o agrega al menos un producto a la lista de venta.';
             return;
         }
 
@@ -655,24 +781,21 @@
         const last4 = numTarjeta.slice(-4) || '0003';
         const cuotas = tbkInputCuotas.value;
 
-        // Paso 1: Animación en el Pinpad / Simulador de Tarjeta
         tbkPinpadStatus.className = 'rounded-3 p-2 bg-info-subtle border border-info text-center small text-dark fw-semibold mb-3';
         tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Conectando con Transbank Webpay... Validando tarjeta **** ' + last4;
 
         await new Promise(r => setTimeout(r, 650));
 
-        // Si es la tarjeta de prueba terminada en 0000, simulamos Rechazo Bancario
         if (numTarjeta.endsWith('0000')) {
             window.playScannerBeep(false);
             tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger text-white text-center small fw-bold mb-3';
             tbkPinpadStatus.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>TRANSACCIÓN RECHAZADA POR BANCO EMISOR (Fondos Insuficientes • Cód. -1)';
             resultadoDiv.className = 'mt-3 alert alert-danger';
-            resultadoDiv.innerHTML = '<strong>Pago Rechazado en Transbank:</strong> La tarjeta terminada en **** 0000 fue rechazada por el banco. <strong>No se descontó stock FEFO.</strong>';
+            resultadoDiv.innerHTML = '<strong>Pago Rechazado en Transbank:</strong> La tarjeta terminada en **** 0000 fue rechazada por el banco. <strong>No se descontó stock FEFO de la lista.</strong>';
             return;
         }
 
-        const formData = new FormData(document.getElementById('posForm'));
-        const payload = Object.fromEntries(formData.entries());
+        const payload = construirPayloadCarrito();
 
         try {
             const response = await fetch('{{ route("pos.procesar") }}', {
@@ -696,13 +819,13 @@
                 tbkPinpadStatus.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>¡APROBADA! Tarjeta **** ${last4} • Aut: ${authCode}`;
 
                 const lotesHtml = data.lotes_fefo.map(l =>
-                    `<li>Lote <strong class="font-mono">${l.lote}</strong>: <strong>${l.cantidad} u.</strong> descontadas</li>`
+                    `<li><strong>${l.medicamento || ''}</strong> — Lote <strong class="font-mono">${l.lote}</strong>: <strong>${l.cantidad} u.</strong> descontadas</li>`
                 ).join('');
 
                 resultadoDiv.className = 'mt-3 alert alert-success border-success shadow-sm';
                 resultadoDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} y Pago con Tarjeta Aprobados!</strong>
+                        <strong><i class="bi bi-check-circle-fill me-1"></i>¡Venta #${data.venta_id ?? ''} (${carrito.length} productos) Procesada!</strong>
                         <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
                     </div>
                     <div class="mt-2 p-2 rounded-3 bg-white border small text-dark">
@@ -718,7 +841,9 @@
                     <div class="mt-2 small">Lotes descontados por algoritmo FEFO:</div>
                     <ul class="mb-0 small">${lotesHtml}</ul>
                 `;
-                setTimeout(() => window.location.reload(), 2400);
+                carrito = [];
+                renderizarCarrito();
+                setTimeout(() => window.location.reload(), 2600);
             } else {
                 window.playScannerBeep(false);
                 resultadoDiv.className = 'mt-3 alert alert-danger';
@@ -740,21 +865,19 @@
         ejecutarPagoConSimuladorTarjeta();
     });
 
-    // Opción B: Redirección a la Pasarela Oficial Webpay Plus Sandbox (webpay3gint.transbank.cl)
     document.getElementById('btnRedirigirWebpaySandbox').addEventListener('click', async function () {
         const resultadoDiv = document.getElementById('resultadoVenta');
-        if (!selectMed.value) {
+        if (carrito.length === 0) {
             window.playScannerBeep(false);
             resultadoDiv.className = 'mt-3 alert alert-warning';
-            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o selecciona un medicamento para enviar el monto a Webpay.';
+            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero agrega al menos un producto a la lista para enviar el total a Webpay.';
             return;
         }
 
         tbkPinpadStatus.className = 'rounded-3 p-2 bg-warning-subtle border border-warning text-center small text-dark fw-semibold mb-3';
         tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Creando sesión en servidor oficial Transbank Sandbox (webpay3gint.transbank.cl)...';
 
-        const formData = new FormData(document.getElementById('posForm'));
-        const payload = Object.fromEntries(formData.entries());
+        const payload = construirPayloadCarrito();
 
         try {
             const res = await fetch('{{ route("pos.webpay.iniciar") }}', {

@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Log;
 
 class PosController extends Controller
 {
-    // Credenciales públicas oficiales de Integración (Sandbox) de Transbank Webpay Plus REST v1.2
     private const TBK_SANDBOX_URL = 'https://webpay3gint.transbank.cl/rswebpaytransaction/api/webpay/v1.2/transactions';
     private const TBK_COMMERCE_CODE = '597055555532';
     private const TBK_API_KEY = '579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C';
@@ -55,6 +54,32 @@ class PosController extends Controller
             'plazo_abono' => $plazoAbono,
             'codigo_autorizacion_tbk' => $codigoAutorizacion,
         ];
+    }
+
+    /**
+     * Normaliza la entrada para soportar tanto un carrito multi-producto (items[])
+     * como una venta individual (medicamento_id, cantidad).
+     */
+    private function normalizeCartItems(Request $request): array
+    {
+        if ($request->has('items') && is_array($request->input('items')) && count($request->input('items')) > 0) {
+            $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.medicamento_id' => 'required|integer|exists:medicamentos,id',
+                'items.*.cantidad' => 'required|integer|min:1',
+            ]);
+            return $request->input('items');
+        }
+
+        $request->validate([
+            'medicamento_id' => 'required|integer',
+            'cantidad' => 'required|integer|min:1',
+        ]);
+
+        return [[
+            'medicamento_id' => (int) $request->medicamento_id,
+            'cantidad' => (int) $request->cantidad,
+        ]];
     }
 
     private function buildDashboardPayload(): array
@@ -242,29 +267,23 @@ class PosController extends Controller
         return view('pos.index', compact('medicamentos', 'convenios'));
     }
 
-    /**
-     * Inicia una transacción real en el Sandbox oficial de Transbank Webpay Plus (webpay3gint.transbank.cl)
-     */
     public function iniciarWebpay(Request $request)
     {
-        $request->validate([
-            'medicamento_id' => 'required|integer|exists:medicamentos,id',
-            'cantidad' => 'required|integer|min:1',
-            'convenio_id' => 'nullable|integer|exists:convenios,id',
-            'metodo_pago' => 'nullable|string|max:40',
-        ]);
+        $items = $this->normalizeCartItems($request);
 
-        $medicamento = Medicamento::findOrFail($request->medicamento_id);
-        $stockDisponible = Lote::where('medicamento_id', $medicamento->id)->sum('stock_vitrina');
-
-        if ($stockDisponible < (int) $request->cantidad) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Stock insuficiente en vitrina para iniciar pago en Webpay.',
-            ], 422);
+        $subtotal = 0;
+        foreach ($items as $item) {
+            $med = Medicamento::findOrFail($item['medicamento_id']);
+            $stockDisponible = Lote::where('medicamento_id', $med->id)->sum('stock_vitrina');
+            if ($stockDisponible < (int) $item['cantidad']) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Stock insuficiente en vitrina para {$med->nombre_comercial}.",
+                ], 422);
+            }
+            $subtotal += (float) $med->precio_unitario * (int) $item['cantidad'];
         }
 
-        $subtotal = (float) $medicamento->precio_unitario * (int) $request->cantidad;
         $descuento = 0;
         if ($request->filled('convenio_id')) {
             $conv = Convenio::find($request->convenio_id);
@@ -272,23 +291,22 @@ class PosController extends Controller
                 $descuento = round($subtotal * ((float) $conv->porcentaje_descuento / 100));
             }
         }
+
         $montoTotal = (int) max(50, round($subtotal - $descuento));
         $buyOrder = 'FARM-' . time() . '-' . mt_rand(100, 999);
         $sessionId = session()->getId() ?: ('SES-' . uniqid());
 
-        // Guardamos los datos de la venta pendiente en sesión para procesarla al volver de Webpay
         session([
-            'webpay_pending_sale' => $request->only([
-                'medicamento_id',
-                'cantidad',
-                'convenio_id',
-                'metodo_pago',
-                'rut_paciente',
-                'nombre_paciente',
-                'rut_medico',
-                'nombre_medico',
-                'numero_receta',
-            ]),
+            'webpay_pending_sale' => [
+                'items' => $items,
+                'convenio_id' => $request->input('convenio_id'),
+                'metodo_pago' => $request->input('metodo_pago', 'credito'),
+                'rut_paciente' => $request->input('rut_paciente'),
+                'nombre_paciente' => $request->input('nombre_paciente'),
+                'rut_medico' => $request->input('rut_medico'),
+                'nombre_medico' => $request->input('nombre_medico'),
+                'numero_receta' => $request->input('numero_receta'),
+            ],
         ]);
 
         $response = Http::withoutVerifying()->withHeaders([
@@ -319,9 +337,6 @@ class PosController extends Controller
         ], 500);
     }
 
-    /**
-     * Retorno oficial desde el formulario Webpay de Transbank (GET/POST con token_ws)
-     */
     public function retornoWebpay(Request $request)
     {
         $token = $request->input('token_ws');
@@ -331,7 +346,6 @@ class PosController extends Controller
             return redirect()->route('pos.index')->with('webpay_error', 'Transacción anulada o expirada por el usuario en Webpay.');
         }
 
-        // Confirmar (Commit) la transacción en Transbank Webpay Plus REST API
         $response = Http::withoutVerifying()->withHeaders([
             'Tbk-Api-Key-Id' => self::TBK_COMMERCE_CODE,
             'Tbk-Api-Key-Secret' => self::TBK_API_KEY,
@@ -347,13 +361,11 @@ class PosController extends Controller
             return redirect()->route('pos.index')->with('webpay_error', 'Pago rechazado por el banco emisor en Webpay (Código: ' . ($tbkData['response_code'] ?? 'N/A') . '). No se descontó stock FEFO.');
         }
 
-        // Mapear el tipo de pago devuelto por Transbank (VD/VP = Débito/Prepago, VN/VC/SI = Crédito)
         $paymentTypeCode = $tbkData['payment_type_code'] ?? 'VD';
         $metodoReal = in_array($paymentTypeCode, ['VD', 'VP'], true) ? 'debito' : 'credito';
         $authCode = 'TBK-' . ($tbkData['authorization_code'] ?? '000000');
         $last4 = $tbkData['card_detail']['card_number'] ?? 'XXXX';
 
-        // Ejecutar el descuento FEFO y registrar la venta
         $subRequest = new Request(array_merge($pending, [
             'metodo_pago' => $metodoReal,
             'codigo_autorizacion_tbk' => $authCode,
@@ -380,9 +392,9 @@ class PosController extends Controller
 
     public function procesarVenta(Request $request)
     {
+        $items = $this->normalizeCartItems($request);
+
         $request->validate([
-            'medicamento_id' => 'required|integer',
-            'cantidad' => 'required|integer|min:1',
             'convenio_id' => 'nullable|integer|exists:convenios,id',
             'metodo_pago' => 'nullable|string|max:40',
             'rut_paciente' => 'nullable|string|max:20',
@@ -393,51 +405,69 @@ class PosController extends Controller
         ]);
 
         try {
-            return DB::transaction(function () use ($request) {
-                $cantidadRestante = (int) $request->cantidad;
-                $lotesAplicados = [];
+            return DB::transaction(function () use ($request, $items) {
+                $lotesAplicadosGlobal = [];
+                $lineasProcesadas = [];
+                $subtotalGlobal = 0;
 
-                $medicamento = Medicamento::findOrFail($request->medicamento_id);
+                foreach ($items as $cartItem) {
+                    $medId = (int) $cartItem['medicamento_id'];
+                    $cantidadSolicitada = (int) $cartItem['cantidad'];
+                    $cantidadRestante = $cantidadSolicitada;
 
-                // Algoritmo FEFO: Selecciona el lote más próximo a vencer con stock
-                $lotes = Lote::where('medicamento_id', $request->medicamento_id)
-                    ->where('stock_vitrina', '>', 0)
-                    ->orderBy('fecha_vencimiento', 'asc')
-                    ->lockForUpdate()
-                    ->get();
+                    $medicamento = Medicamento::findOrFail($medId);
 
-                foreach ($lotes as $lote) {
-                    if ($cantidadRestante <= 0) break;
+                    // Algoritmo FEFO: Selecciona el lote más próximo a vencer con stock
+                    $lotes = Lote::where('medicamento_id', $medId)
+                        ->where('stock_vitrina', '>', 0)
+                        ->orderBy('fecha_vencimiento', 'asc')
+                        ->lockForUpdate() // Evita condiciones de carrera
+                        ->get();
 
-                    $descontar = min($lote->stock_vitrina, $cantidadRestante);
-                    $lote->stock_vitrina -= $descontar;
-                    $lote->save();
+                    foreach ($lotes as $lote) {
+                        if ($cantidadRestante <= 0) break;
 
-                    $cantidadRestante -= $descontar;
-                    $lotesAplicados[] = [
-                        'lote_id' => $lote->id,
-                        'lote' => $lote->numero_lote,
-                        'fecha_vencimiento' => $lote->fecha_vencimiento->format('Y-m-d'),
-                        'cantidad' => $descontar,
-                    ];
+                        $descontar = min($lote->stock_vitrina, $cantidadRestante);
+                        $lote->stock_vitrina -= $descontar;
+                        $lote->save();
+
+                        $cantidadRestante -= $descontar;
+
+                        $registroLote = [
+                            'medicamento_id' => $medicamento->id,
+                            'medicamento' => $medicamento->nombre_comercial,
+                            'es_controlado' => (bool) $medicamento->es_controlado,
+                            'precio_unitario' => (float) $medicamento->precio_unitario,
+                            'lote_id' => $lote->id,
+                            'lote' => $lote->numero_lote,
+                            'fecha_vencimiento' => $lote->fecha_vencimiento->format('Y-m-d'),
+                            'cantidad' => $descontar,
+                        ];
+
+                        $lotesAplicadosGlobal[] = [
+                            'medicamento' => $medicamento->nombre_comercial,
+                            'lote' => $lote->numero_lote,
+                            'cantidad' => $descontar,
+                        ];
+                        $lineasProcesadas[] = $registroLote;
+                    }
+
+                    if ($cantidadRestante > 0) {
+                        throw new \Exception('Stock insuficiente en vitrina para ' . $medicamento->nombre_comercial);
+                    }
+
+                    $subtotalGlobal += (float) $medicamento->precio_unitario * $cantidadSolicitada;
                 }
 
-                if ($cantidadRestante > 0) {
-                    throw new \Exception('Stock insuficiente en vitrina');
-                }
-
-                $precioUnitario = (float) $medicamento->precio_unitario;
-                $subtotal = $precioUnitario * (int) $request->cantidad;
                 $descuento = 0;
-
                 if ($request->filled('convenio_id')) {
                     $convenio = Convenio::find($request->convenio_id);
                     if ($convenio && $convenio->activo) {
-                        $descuento = round($subtotal * ((float) $convenio->porcentaje_descuento / 100), 2);
+                        $descuento = round($subtotalGlobal * ((float) $convenio->porcentaje_descuento / 100), 2);
                     }
                 }
 
-                $total = max(0, $subtotal - $descuento);
+                $total = max(0, $subtotalGlobal - $descuento);
                 $metodoPago = $request->input('metodo_pago', 'efectivo');
                 $authCodeOverride = $request->input('codigo_autorizacion_tbk');
 
@@ -446,7 +476,7 @@ class PosController extends Controller
                 $venta = Venta::create([
                     'user_id' => auth()->id(),
                     'convenio_id' => $request->convenio_id,
-                    'subtotal' => $subtotal,
+                    'subtotal' => $subtotalGlobal,
                     'descuento' => $descuento,
                     'total' => $total,
                     'metodo_pago' => $metodoPago,
@@ -458,28 +488,28 @@ class PosController extends Controller
                     'estado' => 'completada',
                 ]);
 
-                foreach ($lotesAplicados as $itemLote) {
+                foreach ($lineasProcesadas as $linea) {
                     DetalleVenta::create([
                         'venta_id' => $venta->id,
-                        'medicamento_id' => $medicamento->id,
-                        'lote_id' => $itemLote['lote_id'],
-                        'numero_lote' => $itemLote['lote'],
-                        'cantidad' => $itemLote['cantidad'],
-                        'precio_unitario' => $precioUnitario,
-                        'subtotal' => $precioUnitario * $itemLote['cantidad'],
+                        'medicamento_id' => $linea['medicamento_id'],
+                        'lote_id' => $linea['lote_id'],
+                        'numero_lote' => $linea['lote'],
+                        'cantidad' => $linea['cantidad'],
+                        'precio_unitario' => $linea['precio_unitario'],
+                        'subtotal' => $linea['precio_unitario'] * $linea['cantidad'],
                     ]);
 
-                    if ($medicamento->es_controlado) {
+                    if ($linea['es_controlado']) {
                         LibroControlado::create([
                             'venta_id' => $venta->id,
-                            'medicamento_id' => $medicamento->id,
-                            'lote_id' => $itemLote['lote_id'],
+                            'medicamento_id' => $linea['medicamento_id'],
+                            'lote_id' => $linea['lote_id'],
                             'rut_paciente' => $request->input('rut_paciente') ?: '15.432.987-K',
                             'nombre_paciente' => $request->input('nombre_paciente') ?: 'Paciente Controlado',
                             'rut_medico' => $request->input('rut_medico') ?: '10.222.333-4',
                             'nombre_medico' => $request->input('nombre_medico') ?: 'Dr. Médico Tratante',
                             'numero_receta' => $request->input('numero_receta') ?: ('REC-' . str_pad($venta->id, 4, '0', STR_PAD_LEFT)),
-                            'cantidad_dispensada' => $itemLote['cantidad'],
+                            'cantidad_dispensada' => $linea['cantidad'],
                         ]);
                     }
                 }
@@ -487,18 +517,16 @@ class PosController extends Controller
                 try {
                     if (extension_loaded('mongodb')) {
                         AuditLog::create([
-                            'evento' => 'VENTA_PROCESADA_FEFO_TBK',
+                            'evento' => 'VENTA_CARRITO_FEFO_TBK',
                             'entidad' => 'Venta',
                             'entidad_id' => $venta->id,
                             'usuario_id' => auth()->id(),
                             'ip' => $request->ip(),
                             'payload' => [
-                                'medicamento_id' => $medicamento->id,
-                                'nombre_comercial' => $medicamento->nombre_comercial,
-                                'cantidad_total' => (int) $request->cantidad,
+                                'items_count' => count($items),
                                 'total' => $total,
                                 'transbank' => $tbk,
-                                'lotes_fefo' => $lotesAplicados,
+                                'lotes_fefo' => $lotesAplicadosGlobal,
                             ],
                             'fecha_evento' => now()->toIso8601String(),
                         ]);
@@ -512,7 +540,7 @@ class PosController extends Controller
                     'venta_id' => $venta->id,
                     'total' => $total,
                     'transbank' => $tbk,
-                    'lotes_fefo' => $lotesAplicados,
+                    'lotes_fefo' => $lotesAplicadosGlobal,
                 ]);
             });
         } catch (\Exception $e) {
