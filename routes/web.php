@@ -5,6 +5,7 @@ use App\Http\Controllers\PosController;
 use App\Http\Controllers\InventarioController;
 
 Route::get('/', [PosController::class, 'dashboard'])->name('dashboard');
+Route::get('/dashboard/realtime', [PosController::class, 'dashboardRealtime'])->name('dashboard.realtime');
 
 Route::prefix('pos')->name('pos.')->group(function () {
     Route::get('/', [PosController::class, 'index'])->name('index');

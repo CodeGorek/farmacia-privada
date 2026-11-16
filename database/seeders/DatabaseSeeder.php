@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\Rol;
 use App\Models\Convenio;
 use App\Models\Medicamento;
 use App\Models\Lote;
+use App\Models\Venta;
+use App\Models\DetalleVenta;
+use App\Models\LibroControlado;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -19,9 +21,18 @@ class DatabaseSeeder extends Seeder
             ['nombre' => 'Bodeguero', 'descripcion' => 'Recepción de lotes y control FEFO', 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        Convenio::insert([
-            ['nombre' => 'Convenio Adulto Mayor', 'rut_institucion' => '69.000.100-1', 'porcentaje_descuento' => 15.00, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Isapre SaludVida', 'rut_institucion' => '96.500.200-K', 'porcentaje_descuento' => 20.00, 'activo' => true, 'created_at' => now(), 'updated_at' => now()],
+        $convAdulto = Convenio::create([
+            'nombre' => 'Convenio Adulto Mayor',
+            'rut_institucion' => '69.000.100-1',
+            'porcentaje_descuento' => 15.00,
+            'activo' => true,
+        ]);
+
+        $convIsapre = Convenio::create([
+            'nombre' => 'Isapre SaludVida',
+            'rut_institucion' => '96.500.200-K',
+            'porcentaje_descuento' => 20.00,
+            'activo' => true,
         ]);
 
         $paracetamol = Medicamento::create([
@@ -35,43 +46,148 @@ class DatabaseSeeder extends Seeder
             'stock_minimo' => 20,
         ]);
 
-        // Dos lotes con distinta fecha de vencimiento para demostrar FEFO
-        Lote::create([
-            'medicamento_id' => $paracetamol->id,
-            'numero_lote' => 'LOT-PAR-2027B',
-            'fecha_elaboracion' => '2025-06-01',
-            'fecha_vencimiento' => '2027-06-01',
-            'stock_vitrina' => 25,
-            'stock_bodega' => 80,
-        ]);
-
-        Lote::create([
+        $lotePar26 = Lote::create([
             'medicamento_id' => $paracetamol->id,
             'numero_lote' => 'LOT-PAR-2026A',
             'fecha_elaboracion' => '2025-01-10',
-            'fecha_vencimiento' => '2026-12-15', // Vence antes -> Prioridad FEFO #1
-            'stock_vitrina' => 10,
+            'fecha_vencimiento' => now()->addDays(22)->format('Y-m-d'), // Crítico <= 30d
+            'stock_vitrina' => 14,
             'stock_bodega' => 40,
+        ]);
+
+        $lotePar27 = Lote::create([
+            'medicamento_id' => $paracetamol->id,
+            'numero_lote' => 'LOT-PAR-2027B',
+            'fecha_elaboracion' => '2025-06-01',
+            'fecha_vencimiento' => now()->addMonths(8)->format('Y-m-d'),
+            'stock_vitrina' => 25,
+            'stock_bodega' => 80,
         ]);
 
         $clonazepam = Medicamento::create([
             'codigo_barra' => '780123456002',
             'nombre_comercial' => 'Clonazepam 2mg Caja x30',
             'principio_activo' => 'Clonazepam',
-            'laboratorio' => 'Saval',
+            'laboratorio' => 'Laboratorio Saval',
             'precio_unitario' => 6490,
             'requiere_receta' => true,
             'es_controlado' => true,
             'stock_minimo' => 10,
         ]);
 
-        Lote::create([
+        $loteClo = Lote::create([
             'medicamento_id' => $clonazepam->id,
             'numero_lote' => 'LOT-CLO-2027A',
             'fecha_elaboracion' => '2025-03-15',
-            'fecha_vencimiento' => '2027-03-15',
+            'fecha_vencimiento' => now()->addDays(58)->format('Y-m-d'), // Próximo 31-90d
             'stock_vitrina' => 15,
             'stock_bodega' => 50,
+        ]);
+
+        $amoxicilina = Medicamento::create([
+            'codigo_barra' => '780123456003',
+            'nombre_comercial' => 'Amoxicilina 500mg Caja x21',
+            'principio_activo' => 'Amoxicilina Trihidrato',
+            'laboratorio' => 'Mintlab',
+            'precio_unitario' => 4290,
+            'requiere_receta' => true,
+            'es_controlado' => false,
+            'stock_minimo' => 15,
+        ]);
+
+        $loteAmox = Lote::create([
+            'medicamento_id' => $amoxicilina->id,
+            'numero_lote' => 'LOT-AMX-2026C',
+            'fecha_elaboracion' => '2025-04-10',
+            'fecha_vencimiento' => now()->addDays(18)->format('Y-m-d'), // Crítico <= 30d
+            'stock_vitrina' => 8,
+            'stock_bodega' => 30,
+        ]);
+
+        $losartan = Medicamento::create([
+            'codigo_barra' => '780123456004',
+            'nombre_comercial' => 'Losartán Potásico 50mg Caja x30',
+            'principio_activo' => 'Losartán',
+            'laboratorio' => 'Bagó',
+            'precio_unitario' => 5490,
+            'requiere_receta' => true,
+            'es_controlado' => false,
+            'stock_minimo' => 25,
+        ]);
+
+        $loteLos = Lote::create([
+            'medicamento_id' => $losartan->id,
+            'numero_lote' => 'LOT-LOS-2028A',
+            'fecha_elaboracion' => '2025-08-01',
+            'fecha_vencimiento' => now()->addMonths(16)->format('Y-m-d'), // Óptimo > 90d
+            'stock_vitrina' => 42,
+            'stock_bodega' => 120,
+        ]);
+
+        // Ventas iniciales de ejemplo para gráficas en tiempo real
+        $v1 = Venta::create([
+            'convenio_id' => null,
+            'subtotal' => 23880,
+            'descuento' => 0,
+            'total' => 23880,
+            'metodo_pago' => 'efectivo',
+            'estado' => 'completada',
+        ]);
+        DetalleVenta::create([
+            'venta_id' => $v1->id,
+            'medicamento_id' => $paracetamol->id,
+            'lote_id' => $lotePar26->id,
+            'numero_lote' => $lotePar26->numero_lote,
+            'cantidad' => 12,
+            'precio_unitario' => 1990,
+            'subtotal' => 23880,
+        ]);
+
+        $v2 = Venta::create([
+            'convenio_id' => $convIsapre->id,
+            'subtotal' => 12980,
+            'descuento' => 2596,
+            'total' => 10384,
+            'metodo_pago' => 'debito',
+            'estado' => 'completada',
+        ]);
+        DetalleVenta::create([
+            'venta_id' => $v2->id,
+            'medicamento_id' => $clonazepam->id,
+            'lote_id' => $loteClo->id,
+            'numero_lote' => $loteClo->numero_lote,
+            'cantidad' => 2,
+            'precio_unitario' => 6490,
+            'subtotal' => 12980,
+        ]);
+        LibroControlado::create([
+            'venta_id' => $v2->id,
+            'medicamento_id' => $clonazepam->id,
+            'lote_id' => $loteClo->id,
+            'rut_paciente' => '14.892.301-5',
+            'nombre_paciente' => 'Carolina Rojas Soto',
+            'rut_medico' => '9.412.880-2',
+            'nombre_medico' => 'Dr. Roberto Valdés (Psiquiatría)',
+            'numero_receta' => 'REC-CHQ-00481',
+            'cantidad_dispensada' => 2,
+        ]);
+
+        $v3 = Venta::create([
+            'convenio_id' => $convAdulto->id,
+            'subtotal' => 16470,
+            'descuento' => 2470,
+            'total' => 14000,
+            'metodo_pago' => 'credito',
+            'estado' => 'completada',
+        ]);
+        DetalleVenta::create([
+            'venta_id' => $v3->id,
+            'medicamento_id' => $losartan->id,
+            'lote_id' => $loteLos->id,
+            'numero_lote' => $loteLos->numero_lote,
+            'cantidad' => 3,
+            'precio_unitario' => 5490,
+            'subtotal' => 16470,
         ]);
     }
 }

@@ -431,6 +431,12 @@
     inputCant.addEventListener('input', actualizarCalculosYPreview);
     selectConv.addEventListener('change', actualizarCalculosYPreview);
 
+    // Si viene ?scan=CODIGO desde el Dashboard, lo escanea automáticamente al cargar
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('scan')) {
+        procesarCodigoDeBarras(urlParams.get('scan'));
+    }
+
     // Envío transaccional FEFO
     document.getElementById('posForm').addEventListener('submit', async function (e) {
         e.preventDefault();

@@ -41,10 +41,17 @@
         }
 
         .sidebar {
-            width: 280px;
-            min-width: 280px;
+            width: 245px;
+            min-width: 245px;
             box-shadow: 4px 0 24px rgba(15, 23, 42, 0.15);
             z-index: 1030;
+        }
+
+        @media (max-width: 991.98px) {
+            .sidebar {
+                width: 200px;
+                min-width: 200px;
+            }
         }
 
         .brand-box {
