@@ -3,59 +3,32 @@
 @section('content')
 <div class="container-fluid px-0">
     <!-- Encabezado del Módulo POS con Identidad Visual del Rol Vendedor -->
-    <div class="p-3.5 mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3 p-3"
+    <div class="mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3 p-3"
          style="background: linear-gradient(125deg, #0F172A 0%, #1E3A8A 60%, #1D4ED8 100%); box-shadow: 0 10px 26px -6px rgba(30, 58, 138, 0.35);">
         <div class="d-flex align-items-center gap-3">
-            <svg width="52" height="52" class="flex-shrink-0"><use href="#icon-role-vendedor"></use></svg>
+            <svg width="50" height="50" class="flex-shrink-0"><use href="#icon-role-vendedor"></use></svg>
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="badge bg-info text-dark fw-bold rounded-pill px-2.5 py-1" style="font-size: 0.7rem;">
-                        VISTA OPERATIVA VENDEDOR DE FARMACIA
+                        TERMINAL DE CAJA PRESENCIAL • VENDEDOR DE FARMACIA
                     </span>
                     <span class="badge bg-white bg-opacity-10 text-white rounded-pill font-mono" style="font-size: 0.7rem;">
-                        Operador: {{ auth()->user()->name ?? 'Camila Andrea Muñoz (Caja #1)' }}
+                        Cajero(a): {{ auth()->user()->name ?? 'Camila Andrea Muñoz' }}
                     </span>
                 </div>
-                <h3 class="fw-extrabold mb-0">Terminal Punto de Venta (POS) — Carrito Multi-Producto, Switch RUT & Webpay</h3>
+                <h3 class="fw-extrabold mb-0">Punto de Venta (POS) — Escáner FEFO & Switch Convenios</h3>
             </div>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge px-3 py-2 rounded-pill text-white fw-semibold" style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
-                <i class="bi bi-credit-card-2-front me-1"></i>Pasarela Tarjeta Webpay Activa
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill">
+                <span class="scanner-dot me-2"></span>Lector Código de Barras y Pinpad POS Conectados
             </span>
         </div>
     </div>
 
-    <!-- Alertas de Retorno desde Pasarela Oficial Webpay Sandbox -->
-    @if(session('webpay_error'))
-        <div class="alert alert-danger border-0 shadow-sm rounded-4 d-flex align-items-center gap-2 mb-4">
-            <i class="bi bi-x-octagon-fill fs-4"></i>
-            <div>
-                <strong>Transacción Webpay Rechazada / Anulada:</strong> {{ session('webpay_error') }}
-            </div>
-        </div>
-    @endif
-
-    @if(session('webpay_success'))
-        @php $ws = session('webpay_success'); @endphp
-        <div class="alert alert-success border-0 shadow-sm rounded-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h5 class="fw-bold mb-1"><i class="bi bi-patch-check-fill me-2"></i>¡Pago con Tarjeta Aprobado en Transbank Webpay Plus!</h5>
-                    <div class="small">
-                        Venta <strong>#{{ $ws['venta_id'] }}</strong> • Orden: <code class="font-mono">{{ $ws['buy_order'] }}</code> •
-                        Tarjeta terminada en: <strong>**** {{ $ws['card_number'] }}</strong> •
-                        Código Autorización: <span class="badge bg-dark font-mono">{{ $ws['authorization_code'] }}</span>
-                    </div>
-                </div>
-                <span class="fs-4 fw-extrabold font-mono text-success">${{ number_format($ws['total'], 0, ',', '.') }}</span>
-            </div>
-        </div>
-    @endif
-
     <div class="row g-4">
-        <!-- Columna Izquierda: Lector de Código de Barras + Switch Aprobador RUT + Lista de Productos -->
-        <div class="col-lg-7">
+        <!-- Columna Izquierda (Principal): Lector de Código de Barras + Switch Aprobador RUT + Lista de Productos y Cobro -->
+        <div class="col-lg-8">
             <!-- 1. Módulo Lector de Código de Barras Real -->
             <div class="scanner-box p-4 mb-4">
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
@@ -106,8 +79,7 @@
 
                 <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2 border-top border-secondary border-opacity-25 gap-2">
                     <small class="text-white-50">
-                        <i class="bi bi-cart-check-fill text-warning me-1"></i>
-                        Haz clic o escanea varios códigos para agregar distintos productos al carrito:
+                        <i class="bi bi-upc me-1 text-warning"></i>Códigos rápidos de prueba:
                     </small>
                     <div class="d-flex flex-wrap gap-1 align-items-center">
                         @foreach($medicamentos as $med)
@@ -122,7 +94,7 @@
                 </div>
             </div>
 
-            <!-- 2. SWITCH APROBADOR DE CONVENIOS EN LÍNEA POR RUT (I-MED / ISAPRE / FONASA) -->
+            <!-- 2. SWITCH APROBADOR DE CONVENIOS EN LÍNEA POR RUT -->
             <div class="card-pro mb-4 border-primary border-opacity-25">
                 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"
                      style="background: linear-gradient(90deg, #EFF6FF 0%, #F8FAFC 100%);">
@@ -142,7 +114,7 @@
                                 <input type="text"
                                        id="inputRutSwitch"
                                        class="form-control font-mono fw-bold"
-                                       placeholder="Ingresa RUT del cliente (ej. 12.345.678-5)..."
+                                       placeholder="Ingresa RUT del cliente en caja (ej. 12.345.678-5)..."
                                        autocomplete="off">
                             </div>
                         </div>
@@ -156,14 +128,13 @@
                         </div>
                     </div>
 
-                    <!-- Botones rápidos de RUTs de prueba para demostrar distintos escenarios -->
                     <div class="d-flex flex-wrap align-items-center gap-1 mt-2">
-                        <span class="text-muted small me-1"><i class="bi bi-lightning-charge-fill text-warning"></i> Probar RUT:</span>
+                        <span class="text-muted small me-1">Probar RUT:</span>
                         <button type="button" class="btn btn-xs btn-outline-success py-0 px-2 small font-mono btn-test-rut" data-rut="12.345.678-5">
-                            12.345.678-5 (Isapre: cubre Losartán/Amox/Clonaz, NO Paracetamol)
+                            12.345.678-5 (Isapre SaludVida)
                         </button>
                         <button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 small font-mono btn-test-rut" data-rut="9.876.543-3">
-                            9.876.543-3 (Adulto Mayor: cubre Paracetamol -15% y Losartán -30%)
+                            9.876.543-3 (Adulto Mayor / FONASA)
                         </button>
                         <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 small font-mono btn-test-rut" data-rut="15.222.333-4">
                             15.222.333-4 (Rechazado por Mora)
@@ -173,7 +144,6 @@
                         </button>
                     </div>
 
-                    <!-- Respuesta en vivo del Switch Aprobador -->
                     <div id="switchResultadoBox" class="mt-3 d-none"></div>
                 </div>
             </div>
@@ -213,7 +183,7 @@
                                     <td colspan="5" class="text-center py-5 text-muted">
                                         <i class="bi bi-upc-scan fs-1 d-block mb-2 text-secondary"></i>
                                         <div class="fw-bold">La lista de venta está vacía</div>
-                                        <div class="small">Dispara el lector de códigos de barra o haz clic en los códigos de arriba para ir sumando productos.</div>
+                                        <div class="small">Dispara el lector de códigos de barra o selecciona un medicamento arriba para ir armando el pedido.</div>
                                     </td>
                                 </tr>
                             </tbody>
@@ -221,7 +191,7 @@
                     </div>
                 </div>
 
-                <!-- Pie del Carrito: Medio de Pago, Receta Controlada y Totales -->
+                <!-- Pie del Carrito: Medio de Pago en Caja, Vuelto Efectivo, Receta Controlada y Botón Único de Cobro -->
                 <div class="card-body p-4 border-top bg-light bg-opacity-50">
                     <form id="posForm">
                         @csrf
@@ -229,18 +199,23 @@
                         <input type="hidden" name="rut_cliente" id="rut_cliente" value="">
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-5">
                                 <label class="form-label fw-bold small">Convenio Aplicado por Switch RUT</label>
                                 <input type="text" id="txtConvenioActivoInput" class="form-control bg-white fw-semibold" value="Particular (0% Dcto. — Valida RUT arriba)" readonly>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small">Medio de Pago</label>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small">Medio de Pago en Caja</label>
                                 <select name="metodo_pago" id="metodo_pago" class="form-select fw-semibold">
-                                    <option value="debito" selected>💳 Tarjeta Débito (Redcompra)</option>
-                                    <option value="credito">💳 Tarjeta de Crédito (Webpay)</option>
-                                    <option value="prepago">💳 Tarjeta Prepago</option>
-                                    <option value="efectivo">💵 Efectivo en Caja</option>
+                                    <option value="debito" selected>Tarjeta Débito (Pinpad Redcompra)</option>
+                                    <option value="credito">Tarjeta de Crédito (Pinpad Transbank)</option>
+                                    <option value="prepago">Tarjeta Prepago (Pinpad Transbank)</option>
+                                    <option value="efectivo">Efectivo en Caja (Con cálculo de vuelto)</option>
                                 </select>
+                            </div>
+                            <div class="col-md-3" id="colEfectivoRecibido">
+                                <label class="form-label fw-bold small">Efectivo Recibido ($)</label>
+                                <input type="number" id="inputEfectivoCliente" class="form-control font-mono fw-bold" placeholder="Ej. 20000">
+                                <div id="txtVueltoCliente" class="small fw-bold text-success mt-1"></div>
                             </div>
                         </div>
 
@@ -258,32 +233,29 @@
                             <div class="row g-2 mb-2">
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Paciente</label>
-                                    <input type="text" name="rut_paciente" id="inputRutPacienteCtrl" class="form-control form-control-sm" value="12.345.678-5" placeholder="12.345.678-9">
+                                    <input type="text" name="rut_paciente" id="inputRutPacienteCtrl" class="form-control form-control-sm" value="12.345.678-5">
                                 </div>
                                 <div class="col-md-8">
                                     <label class="form-label small fw-semibold mb-1">Nombre Completo Paciente</label>
-                                    <input type="text" name="nombre_paciente" id="inputNombrePacienteCtrl" class="form-control form-control-sm" value="María Alejandra González" placeholder="Nombre y Apellidos del comprador">
+                                    <input type="text" name="nombre_paciente" id="inputNombrePacienteCtrl" class="form-control form-control-sm" value="María Alejandra González">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">RUT Médico Prescriptor</label>
-                                    <input type="text" name="rut_medico" id="inputRutMedicoCtrl" class="form-control form-control-sm" value="9.412.880-2" placeholder="9.876.543-2">
+                                    <input type="text" name="rut_medico" id="inputRutMedicoCtrl" class="form-control form-control-sm" value="9.412.880-2">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">Nombre Médico</label>
-                                    <input type="text" name="nombre_medico" id="inputNombreMedicoCtrl" class="form-control form-control-sm" value="Dr. Roberto Valdés (Psiquiatría)" placeholder="Dr. Nombre Apellido">
+                                    <input type="text" name="nombre_medico" id="inputNombreMedicoCtrl" class="form-control form-control-sm" value="Dr. Roberto Valdés (Psiquiatría)">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label small fw-semibold mb-1">Folio Receta Retenida/Cheque</label>
-                                    <input type="text" name="numero_receta" id="inputNumeroRecetaCtrl" class="form-control form-control-sm font-mono" value="REC-CHQ-2026-0105" placeholder="REC-2026-0091">
+                                    <input type="text" name="numero_receta" id="inputNumeroRecetaCtrl" class="form-control form-control-sm font-mono" value="REC-CHQ-2026-0105">
                                 </div>
                             </div>
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top border-warning">
                                 <button type="button" id="btnEnviarSolicitudQf" class="btn btn-sm btn-dark fw-bold px-3">
                                     <i class="bi bi-send-check-fill text-warning me-1"></i>Enviar Solicitud de Aprobación al Químico Farmacéutico
                                 </button>
-                                <a href="{{ route('visacion.index') }}" target="_blank" class="btn btn-sm btn-outline-dark fw-semibold">
-                                    <i class="bi bi-box-arrow-up-right me-1"></i>Ir a Bandeja del Q.F. (/visacion-qf)
-                                </a>
                             </div>
                             <div id="boxRespuestaVisacionQf" class="mt-2 d-none"></div>
                         </div>
@@ -296,7 +268,7 @@
                                         Unidades totales a dispensar: <strong id="txtUnidadesTotales" class="text-dark">0 u.</strong>
                                     </div>
                                     <div class="small text-muted">
-                                        El descuento del convenio se aplica <strong>solo a los medicamentos adheridos</strong> a su vademécum.
+                                        Descuento de stock automático por vencimiento <strong>FEFO</strong> y emisión de <strong>Boleta Electrónica SII (DTE 39)</strong>.
                                     </div>
                                 </div>
                                 <div class="col-md-6 text-md-end border-start-md ps-md-3">
@@ -318,7 +290,7 @@
                         </div>
 
                         <button type="submit" id="btnSubmitVenta" class="btn btn-verde-medico w-100 py-3 rounded-3 fw-bold fs-5">
-                            <i class="bi bi-credit-card-2-front me-2"></i>Cobrar Lista Completa en Simulador Transbank
+                            <i class="bi bi-check2-circle me-2"></i>Cobrar Venta y Emitir Boleta Electrónica SII
                         </button>
                     </form>
 
@@ -327,135 +299,13 @@
             </div>
         </div>
 
-        <!-- Columna Derecha: SIMULADOR DE PAGO CON TARJETA TRANSBANK (WEBPAY / REDCOMPRA) + Cola FEFO -->
-        <div class="col-lg-5">
-            <!-- SIMULADOR DE PAGO CON TARJETA WEBPAY / REDCOMPRA -->
-            <div class="card-pro mb-4 overflow-hidden border-2" id="cardSimuladorTarjeta" style="border-color: #D5006D;">
-                <div class="card-header d-flex justify-content-between align-items-center text-white py-3"
-                     style="background: linear-gradient(135deg, #2D0B3A 0%, #6B1D7A 55%, #D5006D 100%);">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-credit-card-2-back-fill fs-4"></i>
-                        <div>
-                            <div class="fw-extrabold leading-none">Webpay Plus • Transbank</div>
-                            <div class="text-white-50" style="font-size: 0.72rem;">Simulador de Pago con Tarjeta (Crédito / Redcompra)</div>
-                        </div>
-                    </div>
-                    <span class="badge bg-white text-dark font-mono fw-bold fs-6" id="tbkCardAmountBadge">$0</span>
-                </div>
-
-                <div class="card-body p-3">
-                    <!-- Tarjeta Bancaria Visual 3D -->
-                    <div class="p-3 rounded-4 text-white mb-3 shadow-sm position-relative overflow-hidden"
-                         id="visualCardBox"
-                         style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 65%, #1E40AF 100%); min-height: 155px;">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <div class="d-flex align-items-center gap-2">
-                                <svg width="42" height="31"><use href="#icon-emv-chip"></use></svg>
-                                <i class="bi bi-wifi fs-5 text-white-50" style="transform: rotate(90deg);"></i>
-                            </div>
-                            <span id="visualCardBrand" class="badge bg-white text-dark fw-extrabold px-2 py-1">REDCOMPRA / VISA</span>
-                        </div>
-                        <div class="fs-5 fw-bold font-mono tracking-wider mb-3" id="visualCardNumber" style="letter-spacing: 2px;">
-                            5452 8808 0440 0003
-                        </div>
-                        <div class="d-flex justify-content-between align-items-end small">
-                            <div>
-                                <div class="text-white-50" style="font-size: 0.65rem;">TITULAR TARJETA</div>
-                                <div class="fw-bold text-uppercase font-mono" id="visualCardHolder">CLIENTE PRUEBA TRANSBANK</div>
-                            </div>
-                            <div class="text-end">
-                                <div class="text-white-50" style="font-size: 0.65rem;">VENCE</div>
-                                <div class="fw-bold font-mono" id="visualCardExpiry">10/29</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Selector Rápido de Tarjetas Oficiales de Prueba Transbank -->
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted mb-1">
-                            <i class="bi bi-lightning-fill text-warning me-1"></i>Cargar Tarjeta de Prueba Oficial Transbank:
-                        </label>
-                        <div class="d-flex flex-wrap gap-1">
-                            <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1 fw-semibold btn-preset-card"
-                                    data-tipo="debito"
-                                    data-numero="5452 8808 0440 0003"
-                                    data-exp="10/29"
-                                    data-cvv="123"
-                                    data-brand="REDCOMPRA DÉBITO"
-                                    data-status="APPROVED">
-                                💳 Débito Aprobada
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 fw-semibold btn-preset-card"
-                                    data-tipo="credito"
-                                    data-numero="4051 8856 0044 6623"
-                                    data-exp="12/28"
-                                    data-cvv="123"
-                                    data-brand="VISA CRÉDITO"
-                                    data-status="APPROVED">
-                                💳 Crédito Aprobada
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold btn-preset-card"
-                                    data-tipo="credito"
-                                    data-numero="4051 8856 0044 0000"
-                                    data-exp="05/27"
-                                    data-cvv="999"
-                                    data-brand="TARJETA SIN FONDOS"
-                                    data-status="REJECTED">
-                                ❌ Simular Rechazo
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Campos del Formulario de Tarjeta -->
-                    <div class="row g-2 mb-2">
-                        <div class="col-12">
-                            <label class="form-label small fw-bold mb-1">Número de Tarjeta</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text"><i class="bi bi-credit-card"></i></span>
-                                <input type="text" id="tbkInputNumber" class="form-control font-mono fw-bold" value="5452 8808 0440 0003" maxlength="19">
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label small fw-bold mb-1">Vencimiento</label>
-                            <input type="text" id="tbkInputExp" class="form-control form-control-sm font-mono text-center" value="10/29" maxlength="5">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label small fw-bold mb-1">CVV / PIN</label>
-                            <input type="password" id="tbkInputCvv" class="form-control form-control-sm font-mono text-center" value="1234" maxlength="4">
-                        </div>
-                        <div class="col-4">
-                            <label class="form-label small fw-bold mb-1">Cuotas / Banco</label>
-                            <select id="tbkInputCuotas" class="form-select form-select-sm">
-                                <option value="0">Sin Cuotas (Venta Normal)</option>
-                                <option value="3">3 Cuotas Sin Interés</option>
-                                <option value="6">6 Cuotas Normales</option>
-                                <option value="12">12 Cuotas Normales</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div id="tbkPinpadStatus" class="rounded-3 p-2 bg-light border text-center small text-muted mb-3">
-                        <i class="bi bi-shield-lock-fill text-success me-1"></i>Conexión cifrada TLS 1.3 lista con Transbank.
-                    </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="button" id="btnPagarSimuladorLocal" class="btn text-white fw-bold py-2 rounded-3"
-                                style="background: linear-gradient(135deg, #D5006D 0%, #6B1D7A 100%);">
-                            <i class="bi bi-check2-circle me-1"></i>Autorizar Pago con esta Tarjeta Ahora
-                        </button>
-                        <button type="button" id="btnRedirigirWebpaySandbox" class="btn btn-outline-dark btn-sm py-2 rounded-3 fw-semibold">
-                            <i class="bi bi-box-arrow-up-right me-1"></i>Abrir Pasarela Oficial Webpay Sandbox (webpay3gint.transbank.cl)
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Cola de Lotes en Vitrina -->
-            <div class="card-pro">
+        <!-- Columna Derecha: Cola de Lotes en Vitrina (Orden Estricto FEFO) -->
+        <div class="col-lg-4">
+            <div class="card-pro h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <i class="bi bi-sort-numeric-down text-success me-2"></i>
-                        <span>Cola de Lotes en Vitrina (Orden Estricto FEFO)</span>
+                        <span>Stock en Vitrina (Orden de Salida FEFO)</span>
                     </div>
                     <span class="badge bg-success-subtle text-success rounded-pill">Prioridad Activa</span>
                 </div>
@@ -466,7 +316,7 @@
                                 <tr>
                                     <th>Medicamento / Barcode</th>
                                     <th>Lote</th>
-                                    <th>Vencimiento</th>
+                                    <th>Vence</th>
                                     <th class="text-end">Vitrina</th>
                                 </tr>
                             </thead>
@@ -483,7 +333,7 @@
                                             <td>
                                                 <span class="badge bg-dark font-mono">{{ $lote->numero_lote }}</span>
                                                 @if($idx === 0)
-                                                    <div class="text-success fw-bold" style="font-size: 0.68rem;">★ 1° EN SALIR (FEFO)</div>
+                                                    <div class="text-success fw-bold" style="font-size: 0.68rem;">★ 1° EN SALIR</div>
                                                 @endif
                                             </td>
                                             <td>
@@ -505,9 +355,46 @@
         </div>
     </div>
 
-    <form id="webpayRedirectForm" method="POST" action="" class="d-none">
-        <input type="hidden" name="token_ws" id="webpayTokenInput" value="">
-    </form>
+    <!-- Modal de Máquina Física Pinpad POS Transbank (Solo aparece al presionar Cobrar con Tarjeta) -->
+    <div class="modal fade" id="modalPinpadPos" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 410px;">
+            <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+                <div class="p-3 text-white d-flex justify-content-between align-items-center"
+                     style="background: linear-gradient(135deg, #0F172A 0%, #4A154B 60%, #D5006D 100%);">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-Cpu-fill fs-5"></i>
+                        <div>
+                            <div class="fw-extrabold small">PINPAD POS INTEGRADO TRANSBANK</div>
+                            <div class="text-white-50" style="font-size: 0.7rem;">Terminal Físico de Mesón (Contactless / Chip)</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="p-3 rounded-4 mb-3 text-white font-mono" style="background: #0F172A; border: 2px solid #334155;">
+                        <div class="text-info small mb-1" id="pinpadModalMetodo">VENTA TARJETA DÉBITO REDCOMPRA</div>
+                        <div class="display-6 fw-extrabold text-success mb-2" id="pinpadModalMonto">$0</div>
+                        <div id="pinpadModalScreenMsg" class="small text-white-50">
+                            <i class="bi bi-wifi me-1"></i>ACERQUE, INSERTE O DESLICE TARJETA EN EL PINPAD...
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-3">
+                        El monto ya fue enviado por cable al Pinpad físico del mesón. Simula la acción del cliente en la máquina:
+                    </p>
+
+                    <div class="d-grid gap-2">
+                        <button type="button" id="btnClienteAcercaTarjetaOk" class="btn btn-verde-medico py-2.5 fw-bold rounded-3">
+                            <i class="bi bi-contactless me-1"></i>Cliente Acerca Tarjeta (Aprobar en Pinpad)
+                        </button>
+                        <button type="button" id="btnClienteTarjetaRechazada" class="btn btn-outline-danger btn-sm py-2 fw-semibold rounded-3">
+                            <i class="bi bi-x-circle me-1"></i>Simular Tarjeta Sin Fondos / Rechazada en Pinpad
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -537,12 +424,8 @@
 <script>
 (function () {
     const CATALOGO = @json($catalogoPosJson);
-
-    // Estado del Carrito Multi-Producto
     let carrito = [];
 
-    // Estado del Switch Aprobador de Convenios por RUT:
-    // coberturaActiva es un mapa { medicamento_id: porcentaje_descuento }
     let convenioSwitch = {
         activo: false,
         rut: '',
@@ -561,13 +444,13 @@
     const bloqueControlado = document.getElementById('bloqueControlado');
     const badgeControladoHeader = document.getElementById('badgeControladoHeader');
     const selectMetodo = document.getElementById('metodo_pago');
+    const inputEfectivoCliente = document.getElementById('inputEfectivoCliente');
+    const txtVueltoCliente = document.getElementById('txtVueltoCliente');
     const txtUnidadesTotales = document.getElementById('txtUnidadesTotales');
     const txtSubtotal = document.getElementById('txtSubtotal');
     const txtDescuento = document.getElementById('txtDescuento');
     const txtTotal = document.getElementById('txtTotal');
-    const tbkCardAmountBadge = document.getElementById('tbkCardAmountBadge');
 
-    // Inputs ocultos / visibles de Convenio por RUT
     const hiddenConvenioId = document.getElementById('convenio_id');
     const hiddenRutCliente = document.getElementById('rut_cliente');
     const txtConvenioActivoInput = document.getElementById('txtConvenioActivoInput');
@@ -577,19 +460,26 @@
     const inputRutPacienteCtrl = document.getElementById('inputRutPacienteCtrl');
     const inputNombrePacienteCtrl = document.getElementById('inputNombrePacienteCtrl');
 
-    // Elementos del Simulador de Pago con Tarjeta
-    const visualCardBox = document.getElementById('visualCardBox');
-    const visualCardBrand = document.getElementById('visualCardBrand');
-    const visualCardNumber = document.getElementById('visualCardNumber');
-    const visualCardHolder = document.getElementById('visualCardHolder');
-    const visualCardExpiry = document.getElementById('visualCardExpiry');
-    const tbkInputNumber = document.getElementById('tbkInputNumber');
-    const tbkInputExp = document.getElementById('tbkInputExp');
-    const tbkInputCvv = document.getElementById('tbkInputCvv');
-    const tbkInputCuotas = document.getElementById('tbkInputCuotas');
-    const tbkPinpadStatus = document.getElementById('tbkPinpadStatus');
-
+    let totalActualNumerico = 0;
     const formatCLP = (val) => '$' + Math.round(val || 0).toLocaleString('es-CL');
+
+    function actualizarVueltoEfectivo() {
+        const pagado = parseFloat(inputEfectivoCliente.value || '0');
+        if (pagado > 0 && totalActualNumerico > 0) {
+            const vuelto = pagado - totalActualNumerico;
+            if (vuelto >= 0) {
+                txtVueltoCliente.className = 'small fw-bold text-success mt-1 font-mono';
+                txtVueltoCliente.textContent = 'Vuelto: ' + formatCLP(vuelto);
+            } else {
+                txtVueltoCliente.className = 'small fw-bold text-danger mt-1 font-mono';
+                txtVueltoCliente.textContent = 'Faltan: ' + formatCLP(Math.abs(vuelto));
+            }
+        } else {
+            txtVueltoCliente.textContent = '';
+        }
+    }
+
+    inputEfectivoCliente.addEventListener('input', actualizarVueltoEfectivo);
 
     function calcularBadgesLotesFefo(med, cantidad) {
         let restante = cantidad;
@@ -614,7 +504,7 @@
                     <td colspan="5" class="text-center py-5 text-muted">
                         <i class="bi bi-upc-scan fs-1 d-block mb-2 text-secondary"></i>
                         <div class="fw-bold">La lista de venta está vacía</div>
-                        <div class="small">Dispara el lector de códigos de barra o haz clic en los códigos de arriba para ir sumando productos.</div>
+                        <div class="small">Dispara el lector de códigos de barra o selecciona un medicamento arriba para ir armando el pedido.</div>
                     </td>
                 </tr>
             `;
@@ -626,7 +516,8 @@
             txtSubtotal.textContent = '$0';
             txtDescuento.textContent = '-$0';
             txtTotal.textContent = '$0';
-            tbkCardAmountBadge.textContent = '$0';
+            totalActualNumerico = 0;
+            actualizarVueltoEfectivo();
             return;
         }
 
@@ -644,7 +535,6 @@
             unidadesTotales += cant;
             if (med.controlado) hayControlado = true;
 
-            // Verificar si este medicamento específico está cubierto por el convenio del RUT activo
             const pctCobertura = convenioSwitch.activo && convenioSwitch.cobertura[med.id] !== undefined
                 ? parseFloat(convenioSwitch.cobertura[med.id])
                 : 0;
@@ -670,14 +560,13 @@
             }
 
             const badgeCtrl = med.controlado
-                ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.68rem;">⚠️ CONTROLADO</span>`
+                ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 0.68rem;">CONTROLADO</span>`
                 : '';
 
             const badgeBio = med.bioequivalente
-                ? `<span class="badge bg-warning text-dark border border-dark ms-1" style="font-size: 0.68rem;">💊 BIOEQUIVALENTE ISP</span>`
+                ? `<span class="badge bg-warning text-dark border border-dark ms-1" style="font-size: 0.68rem;">BIOEQUIVALENTE ISP</span>`
                 : '';
 
-            // Ley de Fármacos: Si el producto NO es bioequivalente (es de marca más caro), buscar alternativa bioequivalente del mismo principio activo
             let alertaBioequivalenteHtml = '';
             if (!med.bioequivalente) {
                 const alternativaBio = CATALOGO.find(m =>
@@ -693,7 +582,7 @@
                         <div class="mt-2 p-2 rounded-3 border border-warning bg-warning-subtle d-flex justify-content-between align-items-center flex-wrap gap-2 small">
                             <div>
                                 <span class="badge bg-warning text-dark border border-dark fw-bold me-1">FRANJA AMARILLA ISP • LEY DE FÁRMACOS</span>
-                                Existe alternativa Bioequivalente: <strong>${alternativaBio.nombre}</strong> a <strong>${formatCLP(alternativaBio.precio)}</strong> (Ahorra ${formatCLP(ahorroUnit)}/u.)
+                                Alternativa Bioequivalente: <strong>${alternativaBio.nombre}</strong> a <strong>${formatCLP(alternativaBio.precio)}</strong> (Ahorra ${formatCLP(ahorroUnit)}/u.)
                             </div>
                             <button type="button" class="btn btn-xs btn-dark fw-bold py-1 px-2 small btn-cambiar-bio" data-idx="${idx}" data-bio-id="${alternativaBio.id}">
                                 <i class="bi bi-arrow-left-right text-warning me-1"></i>Cambiar por Bioequivalente
@@ -743,12 +632,12 @@
         bloqueControlado.classList.toggle('d-none', !hayControlado);
         badgeControladoHeader.classList.toggle('d-none', !hayControlado);
 
-        const total = Math.max(0, subtotalGlobal - descuentoGlobal);
+        totalActualNumerico = Math.max(0, subtotalGlobal - descuentoGlobal);
 
         txtSubtotal.textContent = formatCLP(subtotalGlobal);
         txtDescuento.textContent = '-' + formatCLP(descuentoGlobal);
-        txtTotal.textContent = formatCLP(total);
-        tbkCardAmountBadge.textContent = formatCLP(total);
+        txtTotal.textContent = formatCLP(totalActualNumerico);
+        actualizarVueltoEfectivo();
 
         tbodyCarritoPos.querySelectorAll('.btn-cant-menos').forEach(btn => {
             btn.addEventListener('click', function () {
@@ -801,7 +690,6 @@
         });
     }
 
-    // Consultar el Switch Aprobador de Convenios por RUT en el servidor
     async function consultarRutEnSwitch(rutRaw) {
         const rut = (rutRaw || '').trim();
         if (!rut) return;
@@ -836,7 +724,6 @@
                 hiddenConvenioId.value = data.convenio_id;
                 hiddenRutCliente.value = data.rut;
                 txtConvenioActivoInput.value = `${data.convenio_nombre} — Afiliado: ${data.nombre_afiliado} [${data.rut}]`;
-                visualCardHolder.textContent = data.nombre_afiliado.toUpperCase();
                 inputRutPacienteCtrl.value = data.rut;
                 inputNombrePacienteCtrl.value = data.nombre_afiliado;
 
@@ -1003,55 +890,32 @@
         });
     });
 
-    selectMetodo.addEventListener('change', renderizarCarrito);
-
-    tbkInputNumber.addEventListener('input', function () {
-        visualCardNumber.textContent = this.value || '•••• •••• •••• ••••';
-    });
-    tbkInputExp.addEventListener('input', function () {
-        visualCardExpiry.textContent = this.value || 'MM/AA';
-    });
-
-    document.querySelectorAll('.btn-preset-card').forEach(btn => {
-        btn.addEventListener('click', function () {
-            tbkInputNumber.value = this.dataset.numero;
-            tbkInputExp.value = this.dataset.exp;
-            tbkInputCvv.value = this.dataset.cvv;
-            visualCardNumber.textContent = this.dataset.numero;
-            visualCardExpiry.textContent = this.dataset.exp;
-            visualCardBrand.textContent = this.dataset.brand;
-            selectMetodo.value = this.dataset.tipo;
-
-            if (this.dataset.status === 'REJECTED') {
-                visualCardBox.style.background = 'linear-gradient(135deg, #450A0A 0%, #7F1D1D 60%, #991B1B 100%)';
-                tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger fw-semibold mb-3';
-                tbkPinpadStatus.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Tarjeta de prueba configurada para simular RECHAZO BANCARIO (sin fondos).';
-            } else {
-                visualCardBox.style.background = 'linear-gradient(135deg, #1E293B 0%, #0F172A 65%, #1E40AF 100%)';
-                tbkPinpadStatus.className = 'rounded-3 p-2 bg-success-subtle border border-success text-center small text-success fw-semibold mb-3';
-                tbkPinpadStatus.innerHTML = `<i class="bi bi-check-circle-fill me-1"></i>Tarjeta de prueba Transbank (${this.dataset.brand}) lista para aprobar.`;
-            }
-            renderizarCarrito();
-        });
-    });
-
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('scan')) {
         procesarCodigoDeBarras(urlParams.get('scan'));
     }
 
-    // Enviar Solicitud de Aprobación de Receta al Químico Farmacéutico en Tiempo Real
+    // Solicitud de Aprobación de Receta al Químico Farmacéutico en Tiempo Real
     let visacionPollingTimer = null;
     const btnEnviarSolicitudQf = document.getElementById('btnEnviarSolicitudQf');
     const boxRespuestaVisacionQf = document.getElementById('boxRespuestaVisacionQf');
     const badgeEstadoVisacionPos = document.getElementById('badgeEstadoVisacionPos');
 
+    function construirPayloadCarrito() {
+        const formData = new FormData(document.getElementById('posForm'));
+        const base = Object.fromEntries(formData.entries());
+        base.items = carrito.map(i => ({
+            medicamento_id: i.med.id,
+            cantidad: i.cantidad
+        }));
+        return base;
+    }
+
     if (btnEnviarSolicitudQf) {
         btnEnviarSolicitudQf.addEventListener('click', async function () {
             if (carrito.length === 0) return;
             const payload = construirPayloadCarrito();
-            const montoNum = parseInt((txtTotal.textContent || '0').replace(/[^0-9]/g, ''), 10) || 0;
-            payload.monto_total = montoNum;
+            payload.monto_total = totalActualNumerico;
             payload.tipo_receta = 'RECETA_CHEQUE_PSICOTROPICO';
 
             boxRespuestaVisacionQf.className = 'mt-2 p-2 rounded-3 bg-white border small d-flex align-items-center gap-2';
@@ -1077,7 +941,6 @@
                     boxRespuestaVisacionQf.innerHTML = `
                         <div class="d-flex justify-content-between align-items-center">
                             <span><i class="bi bi-hourglass-split text-warning me-1"></i>Solicitud <strong>${data.folio}</strong> enviada. Esperando firma del Químico Farmacéutico...</span>
-                            <a href="{{ route('visacion.index') }}" target="_blank" class="badge bg-primary text-white text-decoration-none">Aprobar como Q.F. →</a>
                         </div>
                     `;
 
@@ -1116,43 +979,15 @@
         });
     }
 
-    function construirPayloadCarrito() {
-        const formData = new FormData(document.getElementById('posForm'));
-        const base = Object.fromEntries(formData.entries());
-        base.items = carrito.map(i => ({
-            medicamento_id: i.med.id,
-            cantidad: i.cantidad
-        }));
-        return base;
-    }
+    // Procesamiento final de la venta (Directo en Efectivo o tras pasar tarjeta en el Pinpad Físico Modal)
+    const modalPinpadEl = document.getElementById('modalPinpadPos');
+    const modalPinpad = new bootstrap.Modal(modalPinpadEl);
+    const pinpadModalMonto = document.getElementById('pinpadModalMonto');
+    const pinpadModalMetodo = document.getElementById('pinpadModalMetodo');
+    const pinpadModalScreenMsg = document.getElementById('pinpadModalScreenMsg');
 
-    async function ejecutarPagoConSimuladorTarjeta() {
+    async function enviarVentaAlServidor() {
         const resultadoDiv = document.getElementById('resultadoVenta');
-        if (carrito.length === 0) {
-            window.playScannerBeep(false);
-            resultadoDiv.className = 'mt-3 alert alert-warning';
-            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o agrega al menos un producto a la lista de venta.';
-            return;
-        }
-
-        const numTarjeta = (tbkInputNumber.value || '').replace(/\s+/g, '');
-        const last4 = numTarjeta.slice(-4) || '0003';
-        const cuotas = tbkInputCuotas.value;
-
-        tbkPinpadStatus.className = 'rounded-3 p-2 bg-info-subtle border border-info text-center small text-dark fw-semibold mb-3';
-        tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm text-primary me-2"></div>Conectando con Transbank Webpay... Validando tarjeta **** ' + last4;
-
-        await new Promise(r => setTimeout(r, 650));
-
-        if (numTarjeta.endsWith('0000')) {
-            window.playScannerBeep(false);
-            tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger text-white text-center small fw-bold mb-3';
-            tbkPinpadStatus.innerHTML = '<i class="bi bi-x-octagon-fill me-1"></i>TRANSACCIÓN RECHAZADA POR BANCO EMISOR (Fondos Insuficientes • Cód. -1)';
-            resultadoDiv.className = 'mt-3 alert alert-danger';
-            resultadoDiv.innerHTML = '<strong>Pago Rechazado en Transbank:</strong> La tarjeta terminada en **** 0000 fue rechazada por el banco. <strong>No se descontó stock FEFO de la lista.</strong>';
-            return;
-        }
-
         const payload = construirPayloadCarrito();
 
         try {
@@ -1170,11 +1005,7 @@
 
             if (response.ok && data.status === 'success') {
                 window.playScannerBeep(true);
-                const tbk = data.transbank || {};
-                const authCode = tbk.codigo_autorizacion_tbk || 'TBK-948201';
-
-                tbkPinpadStatus.className = 'rounded-3 p-2 bg-success text-white text-center small fw-bold mb-3';
-                tbkPinpadStatus.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>¡APROBADA! Tarjeta **** ${last4} • Aut: ${authCode}`;
+                modalPinpad.hide();
 
                 const lotesHtml = data.lotes_fefo.map(l =>
                     `<li><strong>${l.medicamento || ''}</strong> — Lote <strong class="font-mono">${l.lote}</strong>: <strong>${l.cantidad} u.</strong> descontadas</li>`
@@ -1187,18 +1018,8 @@
                         <div class="d-flex align-items-center gap-2">
                             <span class="badge bg-success fs-6">${formatCLP(data.total || 0)}</span>
                             <a href="${data.boleta_url || '/operaciones'}" class="btn btn-sm btn-dark fw-bold">
-                                <i class="bi bi-printer-fill me-1"></i>Ver Boleta SII 80mm
+                                <i class="bi bi-printer-fill me-1"></i>Imprimir Boleta SII 80mm
                             </a>
-                        </div>
-                    </div>
-                    <div class="mt-2 p-2 rounded-3 bg-white border small text-dark">
-                        <div class="d-flex justify-content-between fw-bold border-bottom pb-1 mb-1">
-                            <span><i class="bi bi-credit-card-2-front text-danger me-1"></i>COMPROBANTE PAGO CON TARJETA TRANSBANK</span>
-                            <span class="font-mono badge bg-dark">${authCode}</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span>Tarjeta: <strong>**** **** **** ${last4}</strong> (${cuotas === '0' ? 'Sin cuotas' : cuotas + ' cuotas'})</span>
-                            <span>Estado: <strong class="text-success">AUTORIZADO (Cód. 0)</strong></span>
                         </div>
                     </div>
                     <div class="mt-2 small">Lotes descontados por algoritmo FEFO:</div>
@@ -1208,11 +1029,13 @@
                 renderizarCarrito();
             } else {
                 window.playScannerBeep(false);
+                modalPinpad.hide();
                 resultadoDiv.className = 'mt-3 alert alert-danger';
                 resultadoDiv.innerHTML = `<i class="bi bi-x-octagon-fill me-1"></i>${data.message || 'Error al procesar la venta.'}`;
             }
         } catch (err) {
             window.playScannerBeep(false);
+            modalPinpad.hide();
             resultadoDiv.className = 'mt-3 alert alert-danger';
             resultadoDiv.textContent = 'Error de conexión con el servidor POS.';
         }
@@ -1220,51 +1043,37 @@
 
     document.getElementById('posForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        ejecutarPagoConSimuladorTarjeta();
-    });
-
-    document.getElementById('btnPagarSimuladorLocal').addEventListener('click', function () {
-        ejecutarPagoConSimuladorTarjeta();
-    });
-
-    document.getElementById('btnRedirigirWebpaySandbox').addEventListener('click', async function () {
         const resultadoDiv = document.getElementById('resultadoVenta');
         if (carrito.length === 0) {
             window.playScannerBeep(false);
             resultadoDiv.className = 'mt-3 alert alert-warning';
-            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero agrega al menos un producto a la lista para enviar el total a Webpay.';
+            resultadoDiv.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Primero escanea o agrega al menos un producto a la lista de venta.';
             return;
         }
 
-        tbkPinpadStatus.className = 'rounded-3 p-2 bg-warning-subtle border border-warning text-center small text-dark fw-semibold mb-3';
-        tbkPinpadStatus.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Creando sesión en servidor oficial Transbank Sandbox (webpay3gint.transbank.cl)...';
-
-        const payload = construirPayloadCarrito();
-
-        try {
-            const res = await fetch('{{ route("pos.webpay.iniciar") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify(payload)
-            });
-            const data = await res.json();
-            if (res.ok && data.status === 'success' && data.url && data.token) {
-                const redirectForm = document.getElementById('webpayRedirectForm');
-                redirectForm.action = data.url;
-                document.getElementById('webpayTokenInput').value = data.token;
-                redirectForm.submit();
-            } else {
-                tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger mb-3';
-                tbkPinpadStatus.textContent = data.message || 'No se pudo iniciar transacción en Webpay.';
-            }
-        } catch (err) {
-            tbkPinpadStatus.className = 'rounded-3 p-2 bg-danger-subtle border border-danger text-center small text-danger mb-3';
-            tbkPinpadStatus.textContent = 'Error de red al conectar con Transbank.';
+        if (selectMetodo.value === 'efectivo') {
+            enviarVentaAlServidor();
+        } else {
+            // Abrir pantalla de Pinpad Físico en el mesón esperando que el cliente acerque su tarjeta
+            pinpadModalMonto.textContent = formatCLP(totalActualNumerico);
+            pinpadModalMetodo.textContent = 'PINPAD TRANSBANK • ' + selectMetodo.options[selectMetodo.selectedIndex].text.toUpperCase();
+            pinpadModalScreenMsg.className = 'small text-white-50';
+            pinpadModalScreenMsg.innerHTML = '<i class="bi bi-wifi me-1"></i>ACERQUE, INSERTE O DESLICE TARJETA EN EL PINPAD...';
+            modalPinpad.show();
         }
+    });
+
+    document.getElementById('btnClienteAcercaTarjetaOk').addEventListener('click', async function () {
+        pinpadModalScreenMsg.className = 'small text-warning fw-bold';
+        pinpadModalScreenMsg.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div>PROCESANDO CON TRANSBANK...';
+        await new Promise(r => setTimeout(r, 500));
+        await enviarVentaAlServidor();
+    });
+
+    document.getElementById('btnClienteTarjetaRechazada').addEventListener('click', function () {
+        window.playScannerBeep(false);
+        pinpadModalScreenMsg.className = 'small text-danger fw-bold';
+        pinpadModalScreenMsg.innerHTML = '❌ TARJETA RECHAZADA POR EL BANCO EMISOR (SIN FONDOS)';
     });
 })();
 </script>
