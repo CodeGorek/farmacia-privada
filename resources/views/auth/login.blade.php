@@ -1,187 +1,124 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión — PharmaCore ERP Farmacia Privada</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            background: radial-gradient(circle at 15% 20%, #1E3A8A 0%, #0F172A 55%, #090D16 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            color: #0F172A;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.55);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .login-header {
+            background: linear-gradient(135deg, #090E1A 0%, #1E3A8A 60%, #059669 100%);
+            padding: 34px 32px 28px;
+            text-align: center;
+            color: #ffffff;
+        }
+        .btn-verde-medico {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 6px 18px rgba(5, 150, 105, 0.32);
+            transition: all 0.2s ease;
+        }
+        .btn-verde-medico:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            transform: translateY(-1px);
+        }
+        .form-control:focus {
+            border-color: #10B981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.18);
+        }
+    </style>
+</head>
+<body>
+    @include('partials.svg-icons')
 
-@section('content')
-<div class="container-fluid px-0">
-    <div class="row g-4 align-items-stretch">
-        <!-- Columna Izquierda: Portal de Autenticación Institucional -->
-        <div class="col-lg-5">
-            <div class="card-pro h-100 overflow-hidden">
-                <div class="p-4 text-white" style="background: linear-gradient(135deg, #090E1A 0%, #1E3A8A 60%, #059669 100%);">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <svg width="54" height="54" class="flex-shrink-0">
-                            <use href="#icon-pharmacore-logo"></use>
-                        </svg>
-                        <div>
-                            <span class="badge bg-white bg-opacity-25 text-white rounded-pill px-3 py-1 mb-1">
-                                Control de Acceso por Rol (RBAC)
-                            </span>
-                            <h3 class="fw-extrabold mb-0">Portal de Ingreso</h3>
-                        </div>
-                    </div>
-                    <p class="text-white-50 small mb-0">
-                        Cada cuenta abre su propia vista e interfaz especializada: <strong>Vendedor</strong> (Terminal Caja POS), <strong>Químico Farmacéutico</strong> (Central de Visación ISP) y <strong>Administrador</strong> (Gestión exclusiva de Personal, Turnos y Licencias).
-                    </p>
-                </div>
-
-                <div class="card-body p-4">
-                    @if($errors->any())
-                        <div class="alert alert-danger border-0 shadow-sm rounded-4 small d-flex align-items-center gap-2">
-                            <i class="bi bi-shield-exclamation fs-4"></i>
-                            <div><strong>Acceso Denegado:</strong> {{ $errors->first() }}</div>
-                        </div>
-                    @endif
-
-                    <form action="{{ route('login.post') }}" method="POST" id="loginForm">
-                        @csrf
-                        <div class="mb-3">
-                            <label class="form-label fw-bold small">Correo Institucional o RUT del Funcionario</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-person-vcard text-primary"></i></span>
-                                <input type="text"
-                                       name="identificador"
-                                       id="inputIdentificador"
-                                       class="form-control fw-semibold"
-                                       value="{{ old('identificador', 'admin@farmacia.cl') }}"
-                                       placeholder="ej. admin@farmacia.cl, qf@farmacia.cl o vendedor@farmacia.cl"
-                                       required>
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label fw-bold small">Contraseña de Turno</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="bi bi-key-fill text-primary"></i></span>
-                                <input type="password"
-                                       name="password"
-                                       id="inputPassword"
-                                       class="form-control font-mono"
-                                       value="123456"
-                                       required>
-                            </div>
-                            <div class="form-text small">Contraseña oficial de prueba: <code>123456</code></div>
-                        </div>
-
-                        <button type="submit" class="btn btn-verde-medico w-100 py-3 rounded-3 fw-bold fs-6">
-                            <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar a Mi Vista Asignada
-                        </button>
-                    </form>
-
-                    @if(auth()->check())
-                        <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
-                            <span class="small text-muted">Sesión actual: <strong>{{ auth()->user()->name }}</strong></span>
-                            <form action="{{ route('logout') }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">Cerrar Sesión</button>
-                            </form>
-                        </div>
-                    @endif
-                </div>
+    <div class="login-card">
+        <div class="login-header">
+            <div class="mb-3 d-inline-flex p-2 rounded-4" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255,255,255,0.18);">
+                <svg width="56" height="56">
+                    <use href="#icon-pharmacore-logo"></use>
+                </svg>
             </div>
+            <h4 class="fw-extrabold mb-1">PharmaCore ERP</h4>
+            <p class="text-white-50 small mb-0">Sistema de Gestión y Dispensación Farmacéutica</p>
         </div>
 
-        <!-- Columna Derecha: Selección de Cuentas con Iconos Vectoriales HD y Vistas Diferenciadas -->
-        <div class="col-lg-7">
-            <div class="card-pro h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-layers-half text-primary me-2"></i>
-                        <span>Cuentas por Rol Operativo (Cada Login abre su propia Vista Exclusiva)</span>
-                    </div>
-                    <span class="badge bg-primary-subtle text-primary rounded-pill">Seguridad RBAC Activa</span>
+        <div class="p-4 p-sm-5">
+            @if($errors->any())
+                <div class="alert alert-danger border-0 shadow-sm rounded-4 small d-flex align-items-center gap-2 mb-4">
+                    <i class="bi bi-shield-exclamation fs-5"></i>
+                    <div>{{ $errors->first() }}</div>
                 </div>
-                <div class="card-body p-4">
-                    <div class="row g-3">
-                        @foreach($usuariosDemo as $u)
-                            @php
-                                $licenciaHoy = $u->ausencias()
-                                    ->where('estado', 'VIGENTE')
-                                    ->where('tipo', 'LICENCIA_MEDICA')
-                                    ->whereDate('fecha_inicio', '<=', today())
-                                    ->whereDate('fecha_fin', '>=', today())
-                                    ->first();
+            @endif
 
-                                $rolConfig = match($u->rol) {
-                                    'vendedor' => [
-                                        'svg' => '#icon-role-vendedor',
-                                        'badge' => 'bg-primary-subtle text-primary border-primary-subtle',
-                                        'vista' => 'Abre Vista Caja POS (/pos) — Sin acceso a Personal ni Visación Q.F.',
-                                    ],
-                                    'qf' => [
-                                        'svg' => '#icon-role-qf',
-                                        'badge' => 'bg-success-subtle text-success border-success-subtle',
-                                        'vista' => 'Abre Central de Visación de Recetas (/visacion-qf) — Sin acceso a modificar Personal',
-                                    ],
-                                    'admin' => [
-                                        'svg' => '#icon-role-admin',
-                                        'badge' => 'bg-dark text-warning border-dark',
-                                        'vista' => 'Abre Gestión de Personal, Turnos Nocturnos, Licencias y Reemplazos (/admin/personal)',
-                                    ],
-                                    default => [
-                                        'svg' => '#icon-role-vendedor',
-                                        'badge' => 'bg-secondary-subtle text-secondary',
-                                        'vista' => 'Vista Operador',
-                                    ]
-                                };
-                            @endphp
-                            <div class="col-12">
-                                <div class="p-3 rounded-4 border {{ !$u->activo || $licenciaHoy ? 'bg-danger-subtle bg-opacity-25 border-danger-subtle' : 'bg-white' }} d-flex flex-wrap justify-content-between align-items-center gap-3 shadow-sm">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <svg width="48" height="48" class="flex-shrink-0">
-                                            <use href="{{ $rolConfig['svg'] }}"></use>
-                                        </svg>
-                                        <div>
-                                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                                <span class="badge border {{ $rolConfig['badge'] }}">
-                                                    {{ strtoupper($u->rol_nombre) }}
-                                                </span>
-                                                <span class="font-mono small text-muted">RUT: {{ $u->rut }}</span>
-                                                @if($u->registro_isp)
-                                                    <span class="badge bg-info-subtle text-info-emphasis font-mono">{{ $u->registro_isp }}</span>
-                                                @endif
-                                                @if(!$u->activo)
-                                                    <span class="badge bg-danger">CUENTA DESHABILITADA</span>
-                                                @elseif($licenciaHoy)
-                                                    <span class="badge bg-warning text-dark">BLOQUEADO POR LICENCIA MÉDICA ACTIVA</span>
-                                                @endif
-                                            </div>
-                                            <h6 class="fw-extrabold mb-0">{{ $u->name }}</h6>
-                                            <div class="small text-primary fw-semibold">{{ $rolConfig['vista'] }}</div>
-                                            <div class="text-muted" style="font-size: 0.74rem;">
-                                                Login: <code class="font-mono text-dark">{{ $u->email }}</code> • Horario: {{ $u->horario_habitual }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex gap-2 ms-auto">
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-dark fw-bold btn-cargar-credenciales"
-                                                data-email="{{ $u->email }}">
-                                            Probar Login
-                                        </button>
-                                        @if($u->activo && !$licenciaHoy)
-                                            <a href="{{ route('auth.quick-switch', $u->id) }}" class="btn btn-sm btn-verde-medico fw-bold px-3">
-                                                Abrir Su Vista →
-                                            </a>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
+            <form action="{{ route('login.post') }}" method="POST">
+                @csrf
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-secondary">Correo Institucional o RUT</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-vcard text-primary"></i></span>
+                        <input type="text"
+                               name="identificador"
+                               class="form-control bg-light border-start-0 fs-6 fw-semibold"
+                               value="{{ old('identificador') }}"
+                               placeholder="usuario@farmacia.cl o RUT"
+                               autofocus
+                               required>
                     </div>
                 </div>
-            </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold small text-secondary">Contraseña</label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock-fill text-primary"></i></span>
+                        <input type="password"
+                               name="password"
+                               class="form-control bg-light border-start-0 fs-6 font-mono"
+                               placeholder="••••••••"
+                               required>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="remember" id="remember">
+                        <label class="form-check-label small text-muted" for="remember">Mantener sesión de turno</label>
+                    </div>
+                    <span class="badge bg-light text-secondary border small">DS 466 MINSAL</span>
+                </div>
+
+                <button type="submit" class="btn btn-verde-medico w-100 py-3 rounded-3 fw-bold fs-6">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+                </button>
+            </form>
         </div>
     </div>
-</div>
-@endsection
-
-@push('scripts')
-<script>
-document.querySelectorAll('.btn-cargar-credenciales').forEach(btn => {
-    btn.addEventListener('click', function () {
-        document.getElementById('inputIdentificador').value = this.dataset.email;
-        document.getElementById('inputPassword').value = '123456';
-        document.getElementById('loginForm').submit();
-    });
-});
-</script>
-@endpush
+</body>
+</html>

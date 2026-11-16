@@ -296,6 +296,10 @@ class PosController extends Controller
 
     public function dashboard()
     {
+        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+            return redirect()->route('pos.index');
+        }
+
         $data = $this->buildDashboardPayload();
         return view('dashboard', $data);
     }

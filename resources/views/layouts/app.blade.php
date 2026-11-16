@@ -204,18 +204,6 @@
             padding: 10px 24px;
         }
 
-        .role-pill-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            border-radius: 999px;
-            padding: 5px 13px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            text-decoration: none;
-            transition: all 0.2s ease;
-        }
-
         .table > :not(caption) > * > * {
             padding: 0.8rem 0.95rem;
         }
@@ -233,19 +221,29 @@
     </style>
 </head>
 <body>
-    {{-- Incluir librería de iconos vectoriales HD diseñados a medida --}}
     @include('partials.svg-icons')
 
     @php
         $visacionesPendientesCount = \App\Models\SolicitudVisacion::where('estado', 'PENDIENTE')->count();
         $qfEnTurno = \App\Models\User::where('rol', 'qf')->where('activo', true)->first();
-        $perfilesRapidos = \App\Models\User::whereIn('email', ['vendedor@farmacia.cl', 'qf@farmacia.cl', 'admin@farmacia.cl'])->get();
         $usuarioActual = auth()->user();
-        $rolActual = $usuarioActual ? $usuarioActual->rol : null;
+        $rolActual = $usuarioActual ? $usuarioActual->rol : 'vendedor';
+        $svgRolId = match($rolActual) {
+            'vendedor' => '#icon-role-vendedor',
+            'qf' => '#icon-role-qf',
+            'admin' => '#icon-role-admin',
+            default => '#icon-role-vendedor'
+        };
+        $colorBadgeRol = match($rolActual) {
+            'vendedor' => 'bg-primary text-white',
+            'qf' => 'bg-success text-white',
+            'admin' => 'bg-warning text-dark',
+            default => 'bg-info text-dark'
+        };
     @endphp
 
     <div class="d-flex min-vh-100">
-        <!-- Sidebar de Navegación Adaptativo por Rol -->
+        <!-- Sidebar de Navegación Exclusivo del Rol Autenticado -->
         <nav class="bg-azul-sanitario text-white p-3 vh-100 sticky-top d-flex flex-column justify-content-between sidebar">
             <div>
                 <!-- Marca Oficial con Escudo Vectorial 3D -->
@@ -261,23 +259,9 @@
                     </div>
                 </div>
 
-                <!-- Tarjeta de Identidad del Rol Conectado (Con Icono Vectorial HD a Medida) -->
-                <div class="p-2.5 rounded-4 mb-3 border border-light border-opacity-15 p-2" style="background: rgba(15, 23, 42, 0.55);">
-                    @if($usuarioActual)
-                        @php
-                            $svgRolId = match($rolActual) {
-                                'vendedor' => '#icon-role-vendedor',
-                                'qf' => '#icon-role-qf',
-                                'admin' => '#icon-role-admin',
-                                default => '#icon-role-vendedor'
-                            };
-                            $colorBadgeRol = match($rolActual) {
-                                'vendedor' => 'bg-primary text-white',
-                                'qf' => 'bg-success text-white',
-                                'admin' => 'bg-warning text-dark',
-                                default => 'bg-info text-dark'
-                            };
-                        @endphp
+                <!-- Tarjeta de Identidad del Funcionario Autenticado -->
+                @if($usuarioActual)
+                    <div class="rounded-4 mb-3 border border-light border-opacity-15 p-2.5 p-2" style="background: rgba(15, 23, 42, 0.55);">
                         <div class="d-flex align-items-center gap-2 mb-1">
                             <svg width="36" height="36" class="flex-shrink-0">
                                 <use href="{{ $svgRolId }}"></use>
@@ -288,105 +272,102 @@
                             </div>
                         </div>
                         <div class="d-flex justify-content-between align-items-center pt-1 mt-1 border-top border-secondary border-opacity-25" style="font-size: 0.7rem;">
-                            <span class="text-white-50 font-mono">{{ $usuarioActual->rut }}</span>
-                            <a href="{{ route('login') }}" class="text-info text-decoration-none fw-semibold">Cambiar cuenta →</a>
+                            <span class="text-white-50 font-mono">RUT: {{ $usuarioActual->rut }}</span>
+                            <span class="text-success fw-semibold">● En Turno</span>
                         </div>
-                    @else
-                        <div class="d-flex align-items-center gap-2">
-                            <svg width="34" height="34" class="flex-shrink-0">
-                                <use href="#icon-role-admin"></use>
-                            </svg>
-                            <div>
-                                <div class="fw-bold small text-white">Sin Sesión Iniciada</div>
-                                <a href="{{ route('login') }}" class="badge bg-warning text-dark text-decoration-none" style="font-size: 0.68rem;">
-                                    Iniciar Sesión por Rol →
-                                </a>
-                            </div>
-                        </div>
-                    @endif
-                </div>
+                    </div>
+                @endif
 
-                <!-- Menú Personalizado según el Login Activo -->
+                <!-- Menú Estricto Según el Rol de la Cuenta -->
                 <div class="text-uppercase text-white-50 small fw-bold px-2 mb-2" style="font-size: 0.67rem; letter-spacing: 1px;">
                     @if($rolActual === 'vendedor')
-                        Vista Exclusiva Vendedor Caja
+                        Módulos de Caja y Ventas
                     @elseif($rolActual === 'qf')
-                        Vista Dirección Técnica (Q.F.)
+                        Módulos Dirección Técnica Q.F.
                     @elseif($rolActual === 'admin')
-                        Vista Administración Total
-                    @else
-                        Menú General de Módulos
+                        Módulos Administración General
                     @endif
                 </div>
 
                 <ul class="nav flex-column nav-sidebar">
-                    {{-- Dashboard BI: visible para Admin, QF o sin login --}}
-                    @if(!$rolActual || in_array($rolActual, ['admin', 'qf']))
-                        <li class="nav-item">
-                            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                                <svg class="nav-svg-icon"><use href="#icon-nav-dashboard"></use></svg>
-                                <span>Dashboard BI Vivo</span>
-                            </a>
-                        </li>
-                    @endif
-
-                    {{-- Punto de Venta POS: Vista principal del Vendedor y supervisable por Admin --}}
-                    @if(!$rolActual || in_array($rolActual, ['vendedor', 'admin']))
+                    {{-- 1. VENDEDOR: Solo ve su Terminal POS, Cierre de Caja Z/Boletas y Consulta de Stock --}}
+                    @if($rolActual === 'vendedor')
                         <li class="nav-item">
                             <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-pos"></use></svg>
                                 <span>Terminal Caja POS</span>
-                                <span class="ms-auto badge bg-success text-white rounded-pill" style="font-size: 0.64rem;">FEFO</span>
                             </a>
                         </li>
-                    @endif
+                        <li class="nav-item">
+                            <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-operaciones"></use></svg>
+                                <span>Mi Caja Z y Boletas SII</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
+                                <span>Consulta Stock FEFO</span>
+                            </a>
+                        </li>
 
-                    {{-- Central de Visación de Recetas: Vista principal del Químico Farmacéutico (y auditable por Admin) --}}
-                    @if(!$rolActual || in_array($rolActual, ['qf', 'admin']))
+                    {{-- 2. QUÍMICO FARMACÉUTICO: Ve su Bandeja de Visación, Cadena de Frío/Recall/RAM, Inventario/Controlados y Dashboard Clínico --}}
+                    @elseif($rolActual === 'qf')
                         <li class="nav-item">
                             <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.*') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-visacion"></use></svg>
-                                <span>Visación Recetas Q.F.</span>
+                                <span>Visación Recetas ISP</span>
                                 <span id="sidebarBadgeVisaciones" class="ms-auto badge {{ $visacionesPendientesCount > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill">
                                     {{ $visacionesPendientesCount }}
                                 </span>
                             </a>
                         </li>
-                    @endif
+                        <li class="nav-item">
+                            <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-operaciones"></use></svg>
+                                <span>Cadena Frío, Recall & RAM</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
+                                <span>Lotes y Libro Controlados</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-dashboard"></use></svg>
+                                <span>Monitor Clínico BI</span>
+                            </a>
+                        </li>
 
-                    {{-- Inventario y Lotes FEFO: disponible para consulta y abastecimiento --}}
-                    <li class="nav-item">
-                        <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
-                            <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
-                            <span>Inventario y Lotes</span>
-                        </a>
-                    </li>
-
-                    {{-- Operaciones Caja Z, Boletas SII, Cadena de Frío & Recall ISP --}}
-                    <li class="nav-item">
-                        <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
-                            <svg class="nav-svg-icon"><use href="#icon-nav-operaciones"></use></svg>
-                            <span>Caja Z, SII & ISP</span>
-                        </a>
-                    </li>
-
-                    {{-- Administración de Personal, Turnos Nocturnos, Licencias y Reemplazos: EXCLUSIVO DEL ADMINISTRADOR --}}
-                    @if($rolActual === 'admin')
+                    {{-- 3. ADMINISTRADOR: Ve Gestión de Personal/Turnos/Licencias, Dashboard BI, Finanzas/SII e Inventario --}}
+                    @elseif($rolActual === 'admin')
                         <li class="nav-item">
                             <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-personal"></use></svg>
-                                <span>Personal y Turnos</span>
-                                <span class="ms-auto badge bg-warning text-dark rounded-pill" style="font-size: 0.62rem;">SOLO ADMIN</span>
+                                <span>Personal, Turnos y RRHH</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-dashboard"></use></svg>
+                                <span>Dashboard Ejecutivo BI</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
+                                <span>Inventario y Lotes FEFO</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('operaciones.index') }}" class="nav-link {{ request()->routeIs('operaciones.*') ? 'active' : '' }}">
+                                <svg class="nav-svg-icon"><use href="#icon-nav-operaciones"></use></svg>
+                                <span>Auditoría Caja Z, SII & OC</span>
                             </a>
                         </li>
                     @endif
-
-                    <li class="nav-item mt-1 pt-1 border-top border-secondary border-opacity-25">
-                        <a href="{{ route('login') }}" class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}">
-                            <i class="bi bi-person-Bounding-box fs-5 text-info"></i>
-                            <span>Portal Login / Cuentas</span>
-                        </a>
-                    </li>
                 </ul>
             </div>
 
@@ -407,49 +388,37 @@
 
         <!-- Área Principal -->
         <div class="flex-grow-1 d-flex flex-column min-w-0">
-            <!-- Barra Superior con Termohigrómetro ISP y Selector Rápido de las 3 Cuentas (Cada una con su Vista) -->
+            <!-- Barra Superior Limpia con Datos de la Sesión Actual y Botón Cerrar Sesión -->
             <header class="topbar d-flex flex-wrap justify-content-between align-items-center sticky-top gap-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2.5 py-1.5 rounded-pill small">
                         <i class="bi bi-snow2 me-1 text-primary"></i>Cadena Frío: <strong>4.2°C</strong> (2°–8°C)
                     </span>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill small d-none d-xl-inline-block">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1.5 rounded-pill small d-none d-md-inline-block">
                         <i class="bi bi-thermometer-half me-1"></i>Sala: <strong>21.4°C</strong> • HR 48%
                     </span>
                 </div>
 
-                <!-- Botones con Iconos Vectoriales HD para Alternar entre las 3 Vistas de Usuario en 1 Clic -->
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <span class="text-muted small fw-bold d-none d-md-inline" style="font-size: 0.75rem;">Entrar a la vista de:</span>
-                    @foreach($perfilesRapidos as $p)
-                        @php
-                            $isCurrent = $usuarioActual && $usuarioActual->id === $p->id;
-                            $svgId = match($p->rol) {
-                                'vendedor' => '#icon-role-vendedor',
-                                'qf' => '#icon-role-qf',
-                                'admin' => '#icon-role-admin',
-                                default => '#icon-role-vendedor'
-                            };
-                            $labelVista = match($p->rol) {
-                                'vendedor' => 'Vista Vendedor (Caja POS)',
-                                'qf' => 'Vista Químico Farmacéutico (Visación)',
-                                'admin' => 'Vista Administrador (Personal y Turnos)',
-                                default => $p->rol
-                            };
-                            $stylePill = $isCurrent
-                                ? 'background: #0F172A; color: #fff; border: 2px solid #10B981; box-shadow: 0 4px 12px rgba(16,185,129,0.25);'
-                                : 'background: #F8FAFC; color: #0F172A; border: 1px solid #CBD5E1;';
-                        @endphp
-                        <a href="{{ route('auth.quick-switch', $p->id) }}" class="role-pill-btn" style="{{ $stylePill }}">
-                            <svg width="20" height="20"><use href="{{ $svgId }}"></use></svg>
-                            <span>{{ $labelVista }}</span>
-                        </a>
-                    @endforeach
-                </div>
+                @if($usuarioActual)
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <svg width="26" height="26"><use href="{{ $svgRolId }}"></use></svg>
+                            <div class="text-end leading-tight">
+                                <div class="fw-bold small text-dark">{{ $usuarioActual->name }}</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">{{ $usuarioActual->rol_nombre }} • {{ $usuarioActual->horario_habitual }}</div>
+                            </div>
+                        </div>
+                        <form action="{{ route('logout') }}" method="POST" class="m-0">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold">
+                                <i class="bi bi-box-arrow-right me-1"></i>Cerrar Sesión
+                            </button>
+                        </form>
+                    </div>
+                @endif
             </header>
 
             <main class="flex-grow-1 p-4">
-                {{-- Alerta de Seguridad RBAC cuando un rol sin permisos intenta entrar al panel de otro rol --}}
                 @if(session('rbac_warning'))
                     <div class="alert alert-warning border-warning border-2 shadow-sm rounded-4 d-flex align-items-center gap-3 mb-4">
                         <svg width="38" height="38" class="flex-shrink-0"><use href="#icon-role-admin"></use></svg>
