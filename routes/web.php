@@ -10,7 +10,7 @@ use App\Http\Controllers\OperacionesSanitariasController;
 
 // Portal de Login Público (Sin menús ni vistas internas)
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Todas las rutas internas requieren sesión iniciada (middleware auth)

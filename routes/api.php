@@ -8,4 +8,4 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::post('/pos/procesar-venta', [PosController::class, 'procesarVenta']);
+Route::post('/pos/procesar-venta', [PosController::class, 'procesarVenta'])->middleware('throttle:60,1');

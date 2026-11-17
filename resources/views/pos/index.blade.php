@@ -897,6 +897,7 @@
 
     // Solicitud de Aprobación de Receta al Químico Farmacéutico en Tiempo Real
     let visacionPollingTimer = null;
+    let solicitudVisacionIdAprobada = null;
     const btnEnviarSolicitudQf = document.getElementById('btnEnviarSolicitudQf');
     const boxRespuestaVisacionQf = document.getElementById('boxRespuestaVisacionQf');
     const badgeEstadoVisacionPos = document.getElementById('badgeEstadoVisacionPos');
@@ -908,6 +909,9 @@
             medicamento_id: i.med.id,
             cantidad: i.cantidad
         }));
+        if (solicitudVisacionIdAprobada) {
+            base.solicitud_visacion_id = solicitudVisacionIdAprobada;
+        }
         return base;
     }
 
@@ -953,6 +957,7 @@
                             const dEst = await rEst.json();
                             if (dEst.estado === 'APROBADA') {
                                 clearInterval(visacionPollingTimer);
+                                solicitudVisacionIdAprobada = data.solicitud_id;
                                 window.playScannerBeep(true);
                                 badgeEstadoVisacionPos.className = 'badge bg-success text-white';
                                 badgeEstadoVisacionPos.innerHTML = `<i class="bi bi-patch-check-fill me-1"></i>APROBADA POR Q.F. (${dEst.codigo_firma_qf})`;
@@ -1026,6 +1031,7 @@
                     <ul class="mb-0 small">${lotesHtml}</ul>
                 `;
                 carrito = [];
+                solicitudVisacionIdAprobada = null;
                 renderizarCarrito();
             } else {
                 window.playScannerBeep(false);

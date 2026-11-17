@@ -21,6 +21,13 @@ class InventarioController extends Controller
 
     public function storeMedicamento(Request $request)
     {
+        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+            return redirect()->route('inventario.index')->with(
+                'rbac_warning',
+                'Acceso Restringido: El rol Vendedor solo tiene permisos de consulta de stock y traspaso a vitrina. Solo el Administrador o Químico Farmacéutico pueden registrar nuevos medicamentos o lotes.'
+            );
+        }
+
         $validated = $request->validate([
             'codigo_barra' => 'required|string|max:50|unique:medicamentos,codigo_barra',
             'nombre_comercial' => 'required|string|max:150',
@@ -42,6 +49,13 @@ class InventarioController extends Controller
 
     public function storeLote(Request $request)
     {
+        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+            return redirect()->route('inventario.index')->with(
+                'rbac_warning',
+                'Acceso Restringido: El rol Vendedor solo tiene permisos de consulta de stock y traspaso a vitrina. Solo el Administrador o Químico Farmacéutico pueden registrar nuevos medicamentos o lotes.'
+            );
+        }
+
         $validated = $request->validate([
             'medicamento_id' => 'required|exists:medicamentos,id',
             'numero_lote' => 'required|string|max:30',

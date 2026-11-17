@@ -188,6 +188,13 @@ class OperacionesSanitariasController extends Controller
      */
     public function toggleRecallCuarentena(Request $request, Lote $lote)
     {
+        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+            return redirect()->route('operaciones.index')->with(
+                'rbac_warning',
+                'Acceso Restringido: Solo el Químico Farmacéutico o el Administrador pueden decretar bloqueos por Alerta Recall ISP o emitir Órdenes de Compra.'
+            );
+        }
+
         $lote->bloqueado_recall_isp = !$lote->bloqueado_recall_isp;
         if ($lote->bloqueado_recall_isp) {
             $unidadesMovidas = $lote->stock_vitrina;
@@ -213,6 +220,13 @@ class OperacionesSanitariasController extends Controller
      */
     public function storeOrdenCompra(Request $request)
     {
+        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+            return redirect()->route('operaciones.index')->with(
+                'rbac_warning',
+                'Acceso Restringido: Solo el Químico Farmacéutico o el Administrador pueden decretar bloqueos por Alerta Recall ISP o emitir Órdenes de Compra.'
+            );
+        }
+
         $validated = $request->validate([
             'proveedor' => 'required|string|max:100',
             'medicamento_id' => 'required|exists:medicamentos,id',

@@ -21,7 +21,12 @@ composer install --optimize-autoloader --no-dev
 
 if [ ! -f .env ]; then
     cp .env.example .env
+    sed -i 's/APP_ENV=local/APP_ENV=production/g' .env
+    sed -i 's/APP_DEBUG=true/APP_DEBUG=false/g' .env
     echo "Configura las credenciales de AWS RDS y MongoDB en $APP_DIR/.env antes de continuar."
+else
+    sed -i 's/APP_ENV=local/APP_ENV=production/g' .env
+    sed -i 's/APP_DEBUG=true/APP_DEBUG=false/g' .env
 fi
 
 # Generar clave de aplicación y migrar bases de datos

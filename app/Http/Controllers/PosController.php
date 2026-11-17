@@ -10,6 +10,7 @@ use App\Models\AfiliadoConvenio;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
 use App\Models\LibroControlado;
+use App\Models\SolicitudVisacion;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -503,6 +504,7 @@ class PosController extends Controller
             'convenio_id' => 'nullable|integer|exists:convenios,id',
             'rut_cliente' => 'nullable|string|max:25',
             'metodo_pago' => 'nullable|string|max:40',
+            'solicitud_visacion_id' => 'nullable|integer|exists:solicitudes_visacion,id',
             'rut_paciente' => 'nullable|string|max:20',
             'nombre_paciente' => 'nullable|string|max:150',
             'rut_medico' => 'nullable|string|max:20',
@@ -514,6 +516,7 @@ class PosController extends Controller
             return DB::transaction(function () use ($request, $items) {
                 $lotesAplicadosGlobal = [];
                 $lineasProcesadas = [];
+                $visacionesAProcesar = [];
                 $subtotalGlobal = 0;
                 $descuentoGlobal = 0;
 
@@ -526,6 +529,24 @@ class PosController extends Controller
                     $cantidadRestante = $cantidadSolicitada;
 
                     $medicamento = Medicamento::findOrFail($medId);
+
+                    if ($medicamento->es_controlado && auth()->check() && auth()->user()->rol === 'vendedor') {
+                        $visacionQuery = SolicitudVisacion::where('estado', 'APROBADA');
+                        if ($request->filled('solicitud_visacion_id')) {
+                            $visacionQuery->where('id', (int) $request->input('solicitud_visacion_id'));
+                        } elseif ($request->filled('numero_receta')) {
+                            $visacionQuery->where('numero_receta', $request->input('numero_receta'));
+                        } else {
+                            $visacionQuery->where('vendedor_id', auth()->id());
+                        }
+
+                        $visacionAprobada = $visacionQuery->latest('aprobada_at')->first();
+                        if (!$visacionAprobada) {
+                            throw new \Exception("Seguridad Sanitaria ISP: El medicamento controlado {$medicamento->nombre_comercial} requiere visación y firma digital previa del Químico Farmacéutico antes de poder cobrarse en caja.");
+                        }
+
+                        $visacionesAProcesar[$visacionAprobada->id] = $visacionAprobada;
+                    }
 
                     // Algoritmo FEFO: Selecciona el lote más próximo a vencer con stock válido (excluyendo vencidos y bloqueados por Recall ISP)
                     $lotes = Lote::where('medicamento_id', $medId)
@@ -627,6 +648,10 @@ class PosController extends Controller
                             'cantidad_dispensada' => $linea['cantidad'],
                         ]);
                     }
+                }
+
+                foreach ($visacionesAProcesar as $visacionUsada) {
+                    $visacionUsada->update(['estado' => 'PROCESADA']);
                 }
 
                 try {

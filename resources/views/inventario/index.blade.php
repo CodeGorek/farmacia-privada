@@ -31,6 +31,7 @@
         </div>
     @endif
 
+    @if(!auth()->check() || in_array(auth()->user()->rol, ['admin', 'qf', 'bodeguero']))
     <div class="row g-4 mb-4">
         <!-- 1. Registrar Nuevo Medicamento -->
         <div class="col-lg-6">
@@ -179,6 +180,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Matriz de Lotes Activos -->
     <div class="card-pro mb-4">
