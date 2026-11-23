@@ -18,6 +18,8 @@ use App\Models\CajaTurno;
 use App\Models\BitacoraTemperatura;
 use App\Models\OrdenCompra;
 use App\Models\Farmacovigilancia;
+use App\Models\Cliente;
+use App\Models\AuditoriaSistema;
 use App\Http\Controllers\PosController;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -30,6 +32,20 @@ class DatabaseSeeder extends Seeder
             ['nombre' => 'Químico Farmacéutico', 'descripcion' => 'Dirección técnica y visación de prescripciones médicas', 'created_at' => now(), 'updated_at' => now()],
             ['nombre' => 'Auxiliar de Farmacia', 'descripcion' => 'Dispensación en punto de venta (POS)', 'created_at' => now(), 'updated_at' => now()],
             ['nombre' => 'Administrador General', 'descripcion' => 'Gestión de cuentas, turnos, licencias y reemplazos', 'created_at' => now(), 'updated_at' => now()],
+            ['nombre' => 'Super Administrador', 'descripcion' => 'Control total del sistema, gestión de administradores y auditoría', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        // 0. CUENTA SUPER ADMINISTRADOR
+        $superAdmin = User::create([
+            'rut' => '9.000.001-9',
+            'name' => 'Dirección General (Super Admin)',
+            'email' => 'superadmin@farmacia.cl',
+            'rol' => 'superadmin',
+            'registro_isp' => null,
+            'telefono' => '+56 9 9000 0001',
+            'horario_habitual' => 'Acceso Total 24/7',
+            'activo' => true,
+            'password' => Hash::make('SuperFarma#2026!'),
         ]);
 
         // 1. CUENTAS DE USUARIO
@@ -42,7 +58,7 @@ class DatabaseSeeder extends Seeder
             'telefono' => '+56 9 8412 3301',
             'horario_habitual' => 'Lunes a Viernes 08:30 - 17:00',
             'activo' => true,
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('CajaPos#2026!'),
         ]);
 
         $qfTitular = User::create([
@@ -54,7 +70,7 @@ class DatabaseSeeder extends Seeder
             'telefono' => '+56 9 9201 7745',
             'horario_habitual' => 'Lunes a Viernes 08:00 - 18:00',
             'activo' => true,
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('QuimicoDT#2026!'),
         ]);
 
         $admin = User::create([
@@ -66,7 +82,7 @@ class DatabaseSeeder extends Seeder
             'telefono' => '+56 9 7110 8899',
             'horario_habitual' => 'Lunes a Viernes 09:00 - 18:30',
             'activo' => true,
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('AdminFarma#2026!'),
         ]);
 
         $qfReemplazo = User::create([
@@ -78,7 +94,7 @@ class DatabaseSeeder extends Seeder
             'telefono' => '+56 9 6543 2109',
             'horario_habitual' => 'Turno Nocturno 22:00 - 08:00 & Fines de Semana',
             'activo' => true,
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('GuardiaQF#2026!'),
         ]);
 
         $vendedorLicencia = User::create([
@@ -90,7 +106,7 @@ class DatabaseSeeder extends Seeder
             'telefono' => '+56 9 5432 1098',
             'horario_habitual' => 'Lunes a Sábado 14:00 - 22:00',
             'activo' => true,
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('TurnoTarde#2026!'),
         ]);
 
         // 2. TURNOS DIURNOS Y NOCTURNOS
@@ -336,31 +352,7 @@ class DatabaseSeeder extends Seeder
             'estado' => 'SUSPENDIDO_MORA',
         ]);
 
-        // 5. SOLICITUD DE VISACIÓN PENDIENTE EN LA BANDEJA DEL QUÍMICO FARMACÉUTICO
-        SolicitudVisacion::create([
-            'vendedor_id' => $vendedor->id,
-            'qf_id' => null,
-            'estado' => 'PENDIENTE',
-            'tipo_receta' => 'RECETA_CHEQUE_PSICOTROPICO',
-            'rut_paciente' => '12.345.678-5',
-            'nombre_paciente' => 'María Alejandra González',
-            'rut_medico' => '9.412.880-2',
-            'nombre_medico' => 'Dr. Roberto Valdés (Psiquiatría Adultos)',
-            'numero_receta' => 'REC-CHQ-2026-0094',
-            'items_json' => [
-                [
-                    'medicamento_id' => $clonazepam->id,
-                    'codigo_barra' => $clonazepam->codigo_barra,
-                    'nombre_comercial' => $clonazepam->nombre_comercial,
-                    'principio_activo' => $clonazepam->principio_activo,
-                    'es_controlado' => true,
-                    'requiere_receta' => true,
-                    'cantidad' => 2,
-                    'precio_unitario' => 6490,
-                ],
-            ],
-            'monto_total' => 9735,
-        ]);
+        // 5. BANDEJA DEL QUÍMICO FARMACÉUTICO INICIA LIMPIA (solo recibe solicitudes reales enviadas desde Caja POS)
 
         // 6. APERTURA DE CAJA DE TURNO, TEMPERATURA DS 466, ÓRDENES DE COMPRA CENABAST Y FARMACOVIGILANCIA
         CajaTurno::create([
@@ -507,6 +499,138 @@ class DatabaseSeeder extends Seeder
             'cantidad' => 3,
             'precio_unitario' => 5490,
             'subtotal' => 16470,
+        ]);
+
+        // 7. PRODUCTOS NO FARMACÉUTICOS (PERFUMERÍA, DERMOCOSMÉTICA, INSUMOS)
+        $protectorSolar = Medicamento::create([
+            'codigo_barra' => '780999000101',
+            'nombre_comercial' => 'Protector Solar Eucerin Oil Control FPS 50+ 50ml',
+            'principio_activo' => 'Dermocosmética',
+            'laboratorio' => 'Eucerin / Beiersdorf',
+            'es_medicamento' => false,
+            'categoria_producto' => 'Dermocosmética',
+            'precio_unitario' => 18990,
+            'requiere_receta' => false,
+            'es_controlado' => false,
+            'es_bioequivalente' => false,
+            'es_cenabast' => false,
+            'costo_neto_referencia' => 11200,
+            'requiere_cadena_frio' => false,
+            'stock_minimo' => 8,
+        ]);
+        Lote::create([
+            'medicamento_id' => $protectorSolar->id,
+            'numero_lote' => 'LOT-DERM-2027A',
+            'fecha_elaboracion' => '2025-10-01',
+            'fecha_vencimiento' => now()->addMonths(14)->format('Y-m-d'),
+            'stock_vitrina' => 10,
+            'stock_bodega' => 24,
+            'costo_unitario_compra' => 11200,
+        ]);
+
+        $termometro = Medicamento::create([
+            'codigo_barra' => '780999000102',
+            'nombre_comercial' => 'Termómetro Digital Infrarrojo Sin Contacto',
+            'principio_activo' => 'Insumos Médicos',
+            'laboratorio' => 'Omron Healthcare',
+            'es_medicamento' => false,
+            'categoria_producto' => 'Insumos Médicos',
+            'precio_unitario' => 24990,
+            'requiere_receta' => false,
+            'es_controlado' => false,
+            'es_bioequivalente' => false,
+            'es_cenabast' => false,
+            'costo_neto_referencia' => 14500,
+            'requiere_cadena_frio' => false,
+            'stock_minimo' => 5,
+        ]);
+        Lote::create([
+            'medicamento_id' => $termometro->id,
+            'numero_lote' => 'LOT-INS-2028B',
+            'fecha_elaboracion' => '2025-11-01',
+            'fecha_vencimiento' => now()->addMonths(24)->format('Y-m-d'),
+            'stock_vitrina' => 6,
+            'stock_bodega' => 15,
+            'costo_unitario_compra' => 14500,
+        ]);
+
+        // 8. RECETA APROBADA DE HISTORIAL PARA MÓDULO DE RECETAS APROBADAS
+        SolicitudVisacion::create([
+            'vendedor_id' => $vendedor->id,
+            'qf_id' => $qfTitular->id,
+            'estado' => 'APROBADA',
+            'tipo_receta' => 'RECETA_CHEQUE_PSICOTROPICO',
+            'rut_paciente' => '12.345.678-5',
+            'nombre_paciente' => 'María Alejandra González',
+            'rut_medico' => '9.412.880-2',
+            'nombre_medico' => 'Dr. Roberto Valdés (Psiquiatría Adultos)',
+            'numero_receta' => 'REC-CHQ-00481',
+            'items_json' => [
+                [
+                    'medicamento_id' => $clonazepam->id,
+                    'codigo_barra' => $clonazepam->codigo_barra,
+                    'nombre_comercial' => $clonazepam->nombre_comercial,
+                    'principio_activo' => $clonazepam->principio_activo,
+                    'es_controlado' => true,
+                    'requiere_receta' => true,
+                    'cantidad' => 2,
+                    'precio_unitario' => 6490,
+                ],
+            ],
+            'monto_total' => 9735,
+            'observaciones_qf' => 'Receta cheque original verificada conforme a DS 404/466 MINSAL.',
+            'codigo_firma_qf' => 'QF-ISP-94A2F1',
+            'aprobada_at' => now()->subHours(2),
+        ]);
+
+        // 9. CLIENTES REGISTRADOS
+        Cliente::create([
+            'rut' => '12345678-5',
+            'nombre_completo' => 'María Alejandra González',
+            'telefono' => '+56 9 8765 4321',
+            'email' => 'maria.gonzalez@correo.cl',
+            'direccion' => 'Av. Providencia 1245, Depto 402',
+            'convenio_id' => $convIsapre->id,
+            'observaciones' => 'Paciente crónica en tratamiento continuo.',
+            'activo' => true,
+        ]);
+
+        Cliente::create([
+            'rut' => '9876543-3',
+            'nombre_completo' => 'Jorge Eduardo Ramírez',
+            'telefono' => '+56 9 7654 3210',
+            'email' => 'jorge.ramirez@correo.cl',
+            'direccion' => 'Calle Los Aromos 480, Ñuñoa',
+            'convenio_id' => $convAdulto->id,
+            'observaciones' => 'Beneficiario Adulto Mayor FONASA.',
+            'activo' => true,
+        ]);
+
+        // 10. REGISTROS INICIALES DE AUDITORÍA
+        AuditoriaSistema::create([
+            'user_id' => $superAdmin->id,
+            'usuario_nombre' => $superAdmin->name,
+            'usuario_rol' => $superAdmin->rol,
+            'accion' => 'INICIALIZACION',
+            'modulo' => 'Sistema',
+            'detalle' => 'Inicialización del sistema PharmaCore ERP con cuentas base y módulos de auditoría activos.',
+            'ip' => '127.0.0.1',
+            'navegador' => 'Google Chrome',
+            'sistema_operativo' => 'Windows 10/11',
+            'user_agent' => 'Seed Inicial',
+        ]);
+
+        AuditoriaSistema::create([
+            'user_id' => $qfTitular->id,
+            'usuario_nombre' => $qfTitular->name,
+            'usuario_rol' => $qfTitular->rol,
+            'accion' => 'APROBAR_RECETA',
+            'modulo' => 'Visación Q.F.',
+            'detalle' => 'Aprobó receta REC-CHQ-00481 para paciente María Alejandra González (Firma QF-ISP-94A2F1).',
+            'ip' => '127.0.0.1',
+            'navegador' => 'Microsoft Edge',
+            'sistema_operativo' => 'Windows 10/11',
+            'user_agent' => 'Seed Inicial',
         ]);
     }
 }

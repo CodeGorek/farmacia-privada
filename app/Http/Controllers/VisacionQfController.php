@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SolicitudVisacion;
 use App\Models\LibroControlado;
 use App\Models\Medicamento;
+use App\Models\AuditoriaSistema;
 use Illuminate\Http\Request;
 
 class VisacionQfController extends Controller
@@ -47,6 +48,46 @@ class VisacionQfController extends Controller
     }
 
     /**
+     * Módulo dedicado para revisar el historial de recetas aprobadas y resueltas
+     */
+    public function historial(Request $request)
+    {
+        if ($redirect = $this->verificarPermisoQf()) {
+            return $redirect;
+        }
+
+        $estado = $request->query('estado', 'APROBADA');
+        $q = trim((string) $request->query('q', ''));
+
+        $query = SolicitudVisacion::with(['vendedor', 'quimico'])
+            ->whereIn('estado', ['APROBADA', 'PROCESADA', 'RECHAZADA'])
+            ->latest('aprobada_at')
+            ->latest('id');
+
+        if ($estado === 'APROBADA') {
+            $query->whereIn('estado', ['APROBADA', 'PROCESADA']);
+        } elseif ($estado === 'RECHAZADA') {
+            $query->where('estado', 'RECHAZADA');
+        }
+
+        if ($q !== '') {
+            $query->where(function ($b) use ($q) {
+                $b->where('rut_paciente', 'like', "%{$q}%")
+                    ->orWhere('nombre_paciente', 'like', "%{$q}%")
+                    ->orWhere('numero_receta', 'like', "%{$q}%")
+                    ->orWhere('nombre_medico', 'like', "%{$q}%")
+                    ->orWhere('codigo_firma_qf', 'like', "%{$q}%");
+            });
+        }
+
+        $recetas = $query->get();
+        $totalAprobadas = SolicitudVisacion::whereIn('estado', ['APROBADA', 'PROCESADA'])->count();
+        $totalRechazadas = SolicitudVisacion::where('estado', 'RECHAZADA')->count();
+
+        return view('visacion.historial', compact('recetas', 'estado', 'q', 'totalAprobadas', 'totalRechazadas'));
+    }
+
+    /**
      * Endpoint JSON en tiempo real para que el Químico Farmacéutico vea llegar solicitudes sin recargar
      */
     public function pendientesJson()
@@ -71,7 +112,7 @@ class VisacionQfController extends Controller
                 'numero_receta' => $s->numero_receta,
                 'items' => $s->items_json,
                 'monto_total' => (float) $s->monto_total,
-                'hora' => $s->created_at->format('H:i:s'),
+                'hora' => $s->created_at->format('d/m/Y H:i:s'),
             ]),
         ]);
     }
@@ -144,7 +185,7 @@ class VisacionQfController extends Controller
             'qf_nombre' => $solicitud->quimico->name ?? 'Químico Farmacéutico de Turno',
             'codigo_firma_qf' => $solicitud->codigo_firma_qf,
             'observaciones_qf' => $solicitud->observaciones_qf,
-            'aprobada_at' => $solicitud->aprobada_at ? $solicitud->aprobada_at->format('H:i:s') : null,
+            'aprobada_at' => $solicitud->aprobada_at ? $solicitud->aprobada_at->format('d/m/Y H:i:s') : null,
         ]);
     }
 
@@ -166,6 +207,12 @@ class VisacionQfController extends Controller
             'codigo_firma_qf' => $firma,
             'aprobada_at' => now(),
         ]);
+
+        AuditoriaSistema::registrar(
+            'APROBAR_RECETA',
+            'Visación Q.F.',
+            "Aprobó receta {$solicitud->numero_receta} del paciente {$solicitud->nombre_paciente} ({$solicitud->rut_paciente}). Firma: {$firma}."
+        );
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -195,6 +242,12 @@ class VisacionQfController extends Controller
             'observaciones_qf' => $motivo,
             'aprobada_at' => now(),
         ]);
+
+        AuditoriaSistema::registrar(
+            'RECHAZAR_RECETA',
+            'Visación Q.F.',
+            "Rechazó receta {$solicitud->numero_receta} del paciente {$solicitud->nombre_paciente}. Motivo: {$motivo}"
+        );
 
         if ($request->wantsJson()) {
             return response()->json([

@@ -16,6 +16,8 @@ class Medicamento extends Model
         'nombre_comercial',
         'principio_activo',
         'laboratorio',
+        'es_medicamento',
+        'categoria_producto',
         'precio_unitario',
         'requiere_receta',
         'es_controlado',
@@ -36,6 +38,7 @@ class Medicamento extends Model
         'es_bioequivalente' => 'boolean',
         'es_cenabast' => 'boolean',
         'requiere_cadena_frio' => 'boolean',
+        'es_medicamento' => 'boolean',
         'stock_minimo' => 'integer',
     ];
 

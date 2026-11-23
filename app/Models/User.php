@@ -40,12 +40,23 @@ class User extends Authenticatable
     public function getRolNombreAttribute(): string
     {
         return match ($this->rol) {
+            'superadmin' => 'Super Administrador',
             'admin' => 'Administrador General',
             'qf' => 'Químico Farmacéutico (D.T.)',
             'vendedor' => 'Auxiliar / Vendedor de Farmacia',
             'bodeguero' => 'Encargado de Bodega FEFO',
             default => ucfirst($this->rol),
         };
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->rol === 'superadmin';
+    }
+
+    public function isAdminOrSuper(): bool
+    {
+        return in_array($this->rol, ['admin', 'superadmin'], true);
     }
 
     public function turnos(): HasMany

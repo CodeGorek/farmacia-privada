@@ -52,7 +52,7 @@
                             <span class="badge bg-dark font-mono me-2">VIS-{{ str_pad($sol->id, 4, '0', STR_PAD_LEFT) }}</span>
                             <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">{{ $sol->tipo_receta }}</span>
                             <span class="text-muted small ms-2">
-                                <i class="bi bi-person-workspace me-1"></i>Solicitado por: <strong>{{ $sol->vendedor->name ?? 'Vendedor POS' }}</strong> ({{ $sol->created_at->format('H:i:s') }})
+                                <i class="bi bi-person-workspace me-1"></i>Solicitado por: <strong>{{ $sol->vendedor->name ?? 'Vendedor POS' }}</strong> • <i class="bi bi-clock me-1"></i>{{ $sol->created_at->format('d/m/Y H:i:s') }}
                             </span>
                         </div>
                         <div class="fs-5 fw-extrabold text-success font-mono">
@@ -139,7 +139,7 @@
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light text-muted small text-uppercase">
                         <tr>
-                            <th>Folio / Hora</th>
+                            <th>Folio / Fecha y Hora</th>
                             <th>Estado</th>
                             <th>Vendedor Caja</th>
                             <th>Paciente / Receta</th>
@@ -152,7 +152,7 @@
                             <tr>
                                 <td class="font-mono small">
                                     <strong>VIS-{{ str_pad($h->id, 4, '0', STR_PAD_LEFT) }}</strong>
-                                    <div class="text-muted">{{ $h->created_at->format('d/m H:i') }}</div>
+                                    <div class="text-muted">{{ ($h->aprobada_at ?? $h->created_at)->format('d/m/Y H:i:s') }}</div>
                                 </td>
                                 <td>
                                     @if($h->estado === 'APROBADA' || $h->estado === 'PROCESADA')

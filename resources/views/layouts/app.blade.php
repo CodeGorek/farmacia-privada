@@ -231,12 +231,13 @@
         $svgRolId = match($rolActual) {
             'vendedor' => '#icon-role-vendedor',
             'qf' => '#icon-role-qf',
-            'admin' => '#icon-role-admin',
+            'admin', 'superadmin' => '#icon-role-admin',
             default => '#icon-role-vendedor'
         };
         $colorBadgeRol = match($rolActual) {
             'vendedor' => 'bg-primary text-white',
             'qf' => 'bg-success text-white',
+            'superadmin' => 'bg-danger text-white',
             'admin' => 'bg-warning text-dark',
             default => 'bg-info text-dark'
         };
@@ -284,18 +285,26 @@
                         Módulos de Caja y Ventas
                     @elseif($rolActual === 'qf')
                         Módulos Dirección Técnica Q.F.
+                    @elseif($rolActual === 'superadmin')
+                        Módulos Super Administración
                     @elseif($rolActual === 'admin')
                         Módulos Administración General
                     @endif
                 </div>
 
                 <ul class="nav flex-column nav-sidebar">
-                    {{-- 1. VENDEDOR: Solo ve su Terminal POS, Cierre de Caja Z/Boletas y Consulta de Stock --}}
+                    {{-- 1. VENDEDOR: Terminal POS, Clientes, Caja Z/Boletas y Consulta de Stock --}}
                     @if($rolActual === 'vendedor')
                         <li class="nav-item">
                             <a href="{{ route('pos.index') }}" class="nav-link {{ request()->routeIs('pos.*') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-pos"></use></svg>
                                 <span>Terminal Caja POS</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
+                                <i class="bi bi-person-vcard-fill fs-5 text-info"></i>
+                                <span>Registrar Clientes</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -311,15 +320,21 @@
                             </a>
                         </li>
 
-                    {{-- 2. QUÍMICO FARMACÉUTICO: Ve su Bandeja de Visación, Cadena de Frío/Recall/RAM, Inventario/Controlados y Dashboard Clínico --}}
+                    {{-- 2. QUÍMICO FARMACÉUTICO: Visación, Historial Recetas Aprobadas, Cadena de Frío, Inventario y BI --}}
                     @elseif($rolActual === 'qf')
                         <li class="nav-item">
-                            <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.*') ? 'active' : '' }}">
+                            <a href="{{ route('visacion.index') }}" class="nav-link {{ request()->routeIs('visacion.index') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-visacion"></use></svg>
                                 <span>Visación Recetas ISP</span>
                                 <span id="sidebarBadgeVisaciones" class="ms-auto badge {{ $visacionesPendientesCount > 0 ? 'bg-danger' : 'bg-secondary' }} rounded-pill">
                                     {{ $visacionesPendientesCount }}
                                 </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('visacion.historial') }}" class="nav-link {{ request()->routeIs('visacion.historial') ? 'active' : '' }}">
+                                <i class="bi bi-clipboard2-check-fill fs-5 text-success"></i>
+                                <span>Recetas Aprobadas</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -335,18 +350,30 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
+                                <i class="bi bi-person-vcard-fill fs-5 text-info"></i>
+                                <span>Clientes Registrados</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-dashboard"></use></svg>
                                 <span>Monitor Clínico BI</span>
                             </a>
                         </li>
 
-                    {{-- 3. ADMINISTRADOR: Ve Gestión de Personal/Turnos/Licencias, Dashboard BI, Finanzas/SII e Inventario --}}
-                    @elseif($rolActual === 'admin')
+                    {{-- 3. ADMINISTRADOR & SUPER ADMINISTRADOR --}}
+                    @elseif(in_array($rolActual, ['admin', 'superadmin'], true))
                         <li class="nav-item">
-                            <a href="{{ route('admin.personal.index') }}" class="nav-link {{ request()->routeIs('admin.personal.*') ? 'active' : '' }}">
+                            <a href="{{ route('admin.personal.index', ['seccion' => 'cuentas']) }}" class="nav-link {{ request()->routeIs('admin.personal.*') && request()->query('seccion', 'cuentas') !== 'auditoria' ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-personal"></use></svg>
                                 <span>Personal, Turnos y RRHH</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.personal.index', ['seccion' => 'auditoria']) }}" class="nav-link {{ request()->routeIs('admin.personal.*') && request()->query('seccion') === 'auditoria' ? 'active' : '' }}">
+                                <i class="bi bi-shield-lock-fill fs-5 text-warning"></i>
+                                <span>Auditoría del Sistema</span>
                             </a>
                         </li>
                         <li class="nav-item">
@@ -358,7 +385,19 @@
                         <li class="nav-item">
                             <a href="{{ route('inventario.index') }}" class="nav-link {{ request()->routeIs('inventario.*') ? 'active' : '' }}">
                                 <svg class="nav-svg-icon"><use href="#icon-nav-inventario"></use></svg>
-                                <span>Inventario y Lotes FEFO</span>
+                                <span>Inventario y Bodega</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('visacion.historial') }}" class="nav-link {{ request()->routeIs('visacion.historial') ? 'active' : '' }}">
+                                <i class="bi bi-clipboard2-check-fill fs-5 text-success"></i>
+                                <span>Recetas Aprobadas</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('clientes.index') }}" class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}">
+                                <i class="bi bi-person-vcard-fill fs-5 text-info"></i>
+                                <span>Registrar Clientes</span>
                             </a>
                         </li>
                         <li class="nav-item">

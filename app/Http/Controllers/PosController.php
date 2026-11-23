@@ -12,6 +12,8 @@ use App\Models\DetalleVenta;
 use App\Models\LibroControlado;
 use App\Models\SolicitudVisacion;
 use App\Models\AuditLog;
+use App\Models\Cliente;
+use App\Models\AuditoriaSistema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -76,16 +78,20 @@ class PosController extends Controller
             ->first();
 
         if (!$afiliado || !$afiliado->convenio) {
+            $clienteReg = Cliente::where('rut', $rutNorm)->first();
+            $nombreMostrar = $clienteReg ? $clienteReg->nombre_completo . ' (Cliente Registrado)' : 'Cliente Particular (No afiliado)';
             return response()->json([
                 'status' => 'ok',
                 'tiene_beneficio' => false,
                 'estado_switch' => 'SIN_CONVENIO',
                 'rut' => $rutFormateado,
-                'nombre_afiliado' => 'Cliente Particular (No afiliado)',
+                'nombre_afiliado' => $nombreMostrar,
                 'convenio_id' => null,
                 'convenio_nombre' => 'Particular (0% Dcto.)',
                 'codigo_switch' => null,
-                'mensaje' => 'El RUT consultado no registra convenios activos. Se aplica tarifa Particular (0% descuento).',
+                'mensaje' => $clienteReg
+                    ? "Cliente {$clienteReg->nombre_completo} identificado (sin convenio activo). Se aplica tarifa Particular."
+                    : 'El RUT consultado no registra convenios activos. Se aplica tarifa Particular (0% descuento).',
                 'cobertura_medicamentos' => (object) [],
             ]);
         }
@@ -392,9 +398,23 @@ class PosController extends Controller
             $subLinea = (float) $med->precio_unitario * (int) $item['cantidad'];
             $subtotal += $subLinea;
 
-            if (isset($mapaVademecum[$med->id])) {
-                $descuento += round($subLinea * ($mapaVademecum[$med->id] / 100));
-            }
+            $loteActivo = Lote::where('medicamento_id', $med->id)
+                ->where('stock_vitrina', '>', 0)
+                ->where('bloqueado_recall_isp', false)
+                ->whereDate('fecha_vencimiento', '>=', today())
+                ->orderBy('fecha_vencimiento', 'asc')
+                ->first();
+
+            $pctConvenio = (float) ($mapaVademecum[$med->id] ?? 0);
+            $pctLote = (float) ($loteActivo->descuento_porcentaje ?? 0);
+            $pctMejor = max($pctConvenio, $pctLote);
+            $dctoPct = $pctMejor > 0 ? round($subLinea * ($pctMejor / 100)) : 0;
+
+            $dcto2x1 = ($loteActivo && $loteActivo->promo_2x1)
+                ? (intdiv((int) $item['cantidad'], 2) * (float) $med->precio_unitario)
+                : 0;
+
+            $descuento += max($dctoPct, $dcto2x1);
         }
 
         $montoTotal = (int) max(50, round($subtotal - $descuento));
@@ -592,10 +612,17 @@ class PosController extends Controller
                     $subItem = (float) $medicamento->precio_unitario * $cantidadSolicitada;
                     $subtotalGlobal += $subItem;
 
-                    // Descuento selectivo SOLO si este medicamento pertenece al vademécum del convenio
-                    if (isset($mapaVademecum[$medicamento->id])) {
-                        $descuentoGlobal += round($subItem * ($mapaVademecum[$medicamento->id] / 100));
-                    }
+                    // Aplicar el mayor descuento vigente entre Promo 2x1, Liquidación FEFO / Diario (%) y Convenio (Vademécum)
+                    $loteTop = $lotes->first();
+                    $pctConvenio = (float) ($mapaVademecum[$medicamento->id] ?? 0);
+                    $pctLote = (float) ($loteTop->descuento_porcentaje ?? 0);
+                    $pctFinal = max($pctConvenio, $pctLote);
+                    $dctoPorcentaje = $pctFinal > 0 ? round($subItem * ($pctFinal / 100)) : 0;
+                    $dcto2x1 = ($loteTop && $loteTop->promo_2x1)
+                        ? (intdiv((int) $cantidadSolicitada, 2) * (float) $medicamento->precio_unitario)
+                        : 0;
+
+                    $descuentoGlobal += max($dctoPorcentaje, $dcto2x1);
                 }
 
                 $total = max(0, $subtotalGlobal - $descuentoGlobal);
@@ -678,6 +705,12 @@ class PosController extends Controller
                 } catch (\Throwable $mongoEx) {
                     Log::warning('No se pudo registrar auditoría en MongoDB: ' . $mongoEx->getMessage());
                 }
+
+                AuditoriaSistema::registrar(
+                    'VENTA_POS',
+                    'Punto de Venta (POS)',
+                    "Venta #{$venta->id} ({$venta->folio_dte_sii}) por \$" . number_format($total, 0, ',', '.') . " (" . strtoupper($venta->metodo_pago) . ", " . count($items) . " ítems)."
+                );
 
                 return response()->json([
                     'status' => 'success',

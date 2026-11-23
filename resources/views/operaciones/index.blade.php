@@ -1,18 +1,32 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $puedeVerSanitario = auth()->check() && in_array(auth()->user()->rol, ['qf', 'admin', 'superadmin'], true);
+    $esVendedor = !$puedeVerSanitario;
+@endphp
 <div class="container-fluid px-0">
     <!-- Banner Principal de Operaciones Sanitarias y ERP -->
     <div class="p-4 mb-4 rounded-4 text-white d-flex flex-wrap justify-content-between align-items-center gap-3"
          style="background: linear-gradient(125deg, #0F172A 0%, #1E3A8A 50%, #047857 100%); box-shadow: 0 12px 28px -8px rgba(15, 23, 42, 0.35);">
         <div>
-            <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill mb-2">
-                <i class="bi bi-building-check me-1"></i>CUMPLIMIENTO SII • ISP • SEREMI • LEY CENABAST
-            </span>
-            <h2 class="fw-extrabold mb-1">Centro de Operaciones: Caja Z, Boletas SII, Cadena de Frío, Recall ISP y CENABAST</h2>
-            <p class="mb-0 text-white-50 small">
-                Arqueo y cierre de turno (Reporte Z), emisión de Boletas Electrónicas DTE 39 / Notas de Crédito DTE 61, bitácora térmica DS 466, bloqueo de lotes por Recall ISP y Farmacovigilancia.
-            </p>
+            @if($esVendedor)
+                <span class="badge bg-info text-dark fw-bold px-3 py-1 rounded-pill mb-2">
+                    <i class="bi bi-receipt me-1"></i>MÓDULO DE CAJA Y FACTURACIÓN SII
+                </span>
+                <h2 class="fw-extrabold mb-1">Mi Caja Z y Boletas Electrónicas SII</h2>
+                <p class="mb-0 text-white-50 small">
+                    Apertura, arqueo y cierre de turno (Reporte Z), impresión de Boletas Electrónicas DTE 39 y emisión de Notas de Crédito DTE 61.
+                </p>
+            @else
+                <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill mb-2">
+                    <i class="bi bi-building-check me-1"></i>CUMPLIMIENTO SII • ISP • SEREMI • LEY CENABAST
+                </span>
+                <h2 class="fw-extrabold mb-1">Centro de Operaciones: Caja Z, Boletas SII, Cadena de Frío, Recall ISP y CENABAST</h2>
+                <p class="mb-0 text-white-50 small">
+                    Arqueo y cierre de turno (Reporte Z), emisión de Boletas Electrónicas DTE 39 / Notas de Crédito DTE 61, bitácora térmica DS 466, bloqueo de lotes por Recall ISP y Farmacovigilancia.
+                </p>
+            @endif
         </div>
     </div>
 
@@ -33,7 +47,7 @@
     <!-- FILA 1: APERTURA / ARQUEO DE CAJA Z Y BITÁCORA DE TEMPERATURA / CADENA DE FRÍO ISP -->
     <div class="row g-4 mb-4">
         <!-- 1. Apertura, Arqueo y Cierre de Caja Z por Turno -->
-        <div class="col-lg-6">
+        <div class="{{ $esVendedor ? 'col-12' : 'col-lg-6' }}">
             <div class="card-pro h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-cash-Register text-success me-2"></i>1. Apertura, Arqueo y Cierre de Caja por Turno (Reporte Z)</span>
@@ -120,6 +134,7 @@
             </div>
         </div>
 
+        @if(!$esVendedor)
         <!-- 2. Bitácora Diaria de Temperatura y Cadena de Frío ISP (DS 466) -->
         <div class="col-lg-6">
             <div class="card-pro h-100">
@@ -187,6 +202,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <!-- FILA 2: BOLETAS ELECTRÓNICAS SII (DTE 39) Y NOTAS DE CRÉDITO / ANULACIONES (DTE 61) -->
@@ -266,6 +282,7 @@
         </div>
     </div>
 
+    @if(!$esVendedor)
     <!-- FILA 3: BLOQUEO DE LOTES RECALL ISP / CUARENTENA + ABASTECIMIENTO LEY CENABAST + FARMACOVIGILANCIA RAM -->
     <div class="row g-4">
         <!-- 4. Bloqueo de Lotes por Alerta Sanitaria Recall ISP / Cuarentena -->
@@ -459,5 +476,6 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 @endsection

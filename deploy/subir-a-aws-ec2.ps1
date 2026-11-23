@@ -30,8 +30,8 @@ composer install --optimize-autoloader --no-dev --ignore-platform-req=ext-mongod
 
 cp .env.example .env
 touch database/database.sqlite
-sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/g' .env
-sed -i 's/DB_DATABASE=farmacia/# DB_DATABASE=farmacia/g' .env
+sed -i 's/^DB_CONNECTION=mysql/DB_CONNECTION=sqlite/g' .env
+sed -i 's/^DB_DATABASE=farmacia/# DB_DATABASE=farmacia/g' .env
 
 php artisan key:generate --force
 php artisan migrate:fresh --seed --force

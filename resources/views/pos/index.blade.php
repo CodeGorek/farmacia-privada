@@ -27,88 +27,127 @@
     </div>
 
     <div class="row g-4">
-        <!-- Columna Izquierda (Principal): Lector de Código de Barras + Switch Aprobador RUT + Lista de Productos y Cobro -->
-        <div class="col-lg-8">
-            <!-- 1. Módulo Lector de Código de Barras Real -->
-            <div class="scanner-box p-4 mb-4">
-                <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="scanner-dot"></span>
-                        <span class="fw-bold text-uppercase small tracking-wider" style="color: #34D399 !important;">
-                            Lector Láser / Código de Barras Activo (Agrega directo a la lista)
+        <!-- Terminal POS Unificado a Pantalla Completa: Escáner + Lista de Venta juntos arriba, Switch RUT abajo -->
+        <div class="col-12">
+            <!-- SECCIÓN CONJUNTA SUPERIOR: ESCÁNER + LISTA DE VENTA EN TIEMPO REAL -->
+            <div class="card-pro mb-4 overflow-hidden">
+                <!-- Barra Compacta de Escáner Integrada al Encabezado del Ticket -->
+                <style>
+                    @keyframes pulse-led-red {
+                        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.85); }
+                        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+                        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                    }
+                    .led-rojo {
+                        width: 11px;
+                        height: 11px;
+                        border-radius: 50%;
+                        background-color: #EF4444;
+                        display: inline-block;
+                        box-shadow: 0 0 8px #EF4444;
+                        animation: pulse-led-red 1.1s infinite;
+                    }
+                    .scanner-panel-activo {
+                        border: 3px solid #EF4444 !important;
+                        box-shadow: inset 0 0 22px rgba(239, 68, 68, 0.35), 0 0 18px rgba(239, 68, 68, 0.45) !important;
+                    }
+                    .scanner-input-activo {
+                        border: 2px solid #EF4444 !important;
+                        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.25) !important;
+                    }
+                </style>
+                <div id="scannerPanelContainer" class="p-3 text-white" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border-bottom: 3px solid #10B981; transition: all 0.2s ease;">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="scannerStatusLed" class="scanner-dot"></span>
+                            <span id="scannerStatusTitle" class="fw-bold text-uppercase small tracking-wider" style="color: #34D399 !important;">
+                                Lector Láser / Código de Barras (Haz clic en el ícono verde para modo manos libres)
+                            </span>
+                            <span id="badgeLectorActivado" class="badge bg-danger text-white rounded-pill px-2.5 py-1 d-none align-items-center gap-1">
+                                <span class="led-rojo" style="width: 8px; height: 8px;"></span>
+                                <span class="ms-1 fw-bold">LECTOR ACTIVADO</span>
+                            </span>
+                        </div>
+                        <span id="scannerFeedbackBadge" class="badge bg-white bg-opacity-10 text-white fw-normal">
+                            Esperando lectura de pistola láser...
                         </span>
                     </div>
-                    <span id="scannerFeedbackBadge" class="badge bg-white bg-opacity-10 text-white fw-normal">
-                        Esperando lectura de pistola láser...
-                    </span>
-                </div>
 
-                <div class="input-group input-group-lg mt-2">
-                    <span class="input-group-text bg-success text-white border-0 px-3">
-                        <i class="bi bi-upc-scan fs-4"></i>
-                    </span>
-                    <input type="text"
-                           id="barcodeScannerInput"
-                           class="form-control scanner-input"
-                           placeholder="Escanea cada producto aquí (ej. 780123456001) para sumarlo a la lista..."
-                           autocomplete="off"
-                           autofocus>
-                    <button type="button" id="btnLimpiarScan" class="btn btn-outline-light px-3" title="Limpiar lector">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <!-- Búsqueda / Agregado Manual Rápido -->
-                <div class="row g-2 mt-2 align-items-center">
-                    <div class="col-sm-9">
-                        <select id="selectManualMed" class="form-select form-select-sm bg-dark text-white border-secondary">
-                            <option value="">-- O selecciona manualmente un medicamento para agregar a la lista --</option>
-                            @foreach($medicamentos as $med)
-                                <option value="{{ $med->codigo_barra }}">
-                                    [{{ $med->codigo_barra }}] {{ $med->nombre_comercial }} — ${{ number_format($med->precio_unitario, 0, ',', '.') }} (Stock: {{ $med->lotes->sum('stock_vitrina') }} u.)
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-sm-3 d-grid">
-                        <button type="button" id="btnAgregarManual" class="btn btn-sm btn-verde-medico fw-bold">
-                            <i class="bi bi-cart-plus me-1"></i>Agregar a Lista
+                    <div class="input-group input-group-lg">
+                        <button type="button"
+                                id="btnToggleLectorGlobal"
+                                class="btn btn-success text-white border-0 px-3 d-flex align-items-center gap-2 fw-bold"
+                                title="Activar / Desactivar modo pistola manos libres (sin hacer clic en el buscador)">
+                            <i class="bi bi-upc-scan fs-4"></i>
+                            <span id="txtToggleLector" class="small d-none d-md-inline">Activar Lector</span>
+                        </button>
+                        <input type="text"
+                               id="barcodeScannerInput"
+                               class="form-control scanner-input"
+                               placeholder="Pistolea o escanea cada producto aquí para sumarlo al instante..."
+                               autocomplete="off"
+                               autofocus>
+                        <button type="button" id="btnLimpiarScan" class="btn btn-outline-light px-3" title="Limpiar lector">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center justify-content-between mt-3 pt-2 border-top border-secondary border-opacity-25 gap-2">
-                    <small class="text-white-50">
-                        <i class="bi bi-upc me-1 text-warning"></i>Códigos rápidos de prueba:
-                    </small>
-                    <div class="d-flex flex-wrap gap-1 align-items-center">
-                        @foreach($medicamentos as $med)
-                            <button type="button"
-                                    class="btn btn-sm btn-dark border border-secondary font-mono py-0 px-2 btn-simular-scan"
-                                    data-barcode="{{ $med->codigo_barra }}"
-                                    title="Agregar {{ $med->nombre_comercial }}">
-                                <i class="bi bi-plus-circle text-success me-1"></i>{{ $med->codigo_barra }}
-                            </button>
-                        @endforeach
+                <!-- Encabezado Lista de Venta Inmediatamente Visible -->
+                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2 bg-white">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-cart4 text-primary fs-5"></i>
+                        <span class="fw-extrabold">Lista de Productos en esta Venta (Ticket Actual)</span>
+                        <span class="badge bg-primary rounded-pill" id="badgeTotalItems">0 ítems</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="badgeControladoHeader" class="badge bg-warning text-dark d-none">
+                            <i class="bi bi-shield-exclamation me-1"></i>CONTIENE CONTROLADOS
+                        </span>
+                        <button type="button" id="btnVaciarCarrito" class="btn btn-sm btn-outline-danger py-1 px-2 d-none">
+                            <i class="bi bi-trash3 me-1"></i>Vaciar Lista
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- 2. SWITCH APROBADOR DE CONVENIOS EN LÍNEA POR RUT -->
-            <div class="card-pro mb-4 border-primary border-opacity-25">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"
-                     style="background: linear-gradient(90deg, #EFF6FF 0%, #F8FAFC 100%);">
-                    <div class="d-flex align-items-center gap-2 text-primary">
-                        <i class="bi bi-person-vcard-fill fs-5"></i>
-                        <span class="fw-extrabold">Switch Aprobador de Convenios por RUT (Cobertura por Vademécum)</span>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light text-muted small text-uppercase">
+                                <tr>
+                                    <th>Medicamento / Producto / Lotes FEFO & Descuentos</th>
+                                    <th class="text-end">P. Unitario</th>
+                                    <th class="text-center" style="width: 140px;">Cantidad</th>
+                                    <th class="text-end">Subtotal Línea</th>
+                                    <th class="text-center" style="width: 50px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyCarritoPos">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="bi bi-upc-scan fs-2 d-block mb-1 text-secondary"></i>
+                                        <div class="fw-bold">La lista de venta está vacía</div>
+                                        <div class="small">Dispara el lector de códigos de barra arriba y verás aparecer aquí cada producto con su precio al instante.</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <span id="badgeSwitchStatus" class="badge bg-secondary-subtle text-secondary rounded-pill">
-                        Sin RUT validado (Tarifa Particular)
-                    </span>
                 </div>
-                <div class="card-body p-3">
+
+                <!-- 2. SWITCH APROBADOR DE CONVENIOS POR RUT (DEBAJO DE LA LISTA DE VENTA) -->
+                <div class="border-top p-3" style="background: linear-gradient(90deg, #EFF6FF 0%, #F8FAFC 100%);">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-2 text-primary">
+                            <i class="bi bi-person-vcard-fill fs-5"></i>
+                            <span class="fw-extrabold">Beneficio Cliente — Switch Aprobador de Convenios por RUT</span>
+                        </div>
+                        <span id="badgeSwitchStatus" class="badge bg-secondary-subtle text-secondary rounded-pill">
+                            Sin RUT validado (Tarifa Particular)
+                        </span>
+                    </div>
                     <div class="row g-2 align-items-center mb-2">
-                        <div class="col-sm-7">
+                        <div class="col-sm-6">
                             <div class="input-group">
                                 <span class="input-group-text bg-primary text-white border-0"><i class="bi bi-person-badge"></i></span>
                                 <input type="text"
@@ -118,9 +157,12 @@
                                        autocomplete="off">
                             </div>
                         </div>
-                        <div class="col-sm-5 d-flex gap-1">
+                        <div class="col-sm-6 d-flex flex-wrap gap-2">
                             <button type="button" id="btnValidarRutSwitch" class="btn btn-primary fw-bold flex-grow-1">
                                 <i class="bi bi-shield-check me-1"></i>Validar Beneficio RUT
+                            </button>
+                            <button type="button" class="btn btn-verde-medico fw-bold" data-bs-toggle="modal" data-bs-target="#modalRegistrarClientePos">
+                                <i class="bi bi-person-plus-fill me-1"></i>Registrar Cliente
                             </button>
                             <button type="button" id="btnQuitarRutSwitch" class="btn btn-outline-secondary" title="Quitar convenio / Volver a Particular">
                                 <i class="bi bi-arrow-counterclockwise"></i>
@@ -144,51 +186,7 @@
                         </button>
                     </div>
 
-                    <div id="switchResultadoBox" class="mt-3 d-none"></div>
-                </div>
-            </div>
-
-            <!-- 3. LISTA DE PRODUCTOS DE LA VENTA ACTUAL (CARRITO MULTI-PRODUCTO) -->
-            <div class="card-pro">
-                <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-cart4 text-primary fs-5"></i>
-                        <span>Lista de Productos en esta Venta (Ticket Actual)</span>
-                        <span class="badge bg-primary rounded-pill" id="badgeTotalItems">0 ítems</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span id="badgeControladoHeader" class="badge bg-warning text-dark d-none">
-                            <i class="bi bi-shield-exclamation me-1"></i>CONTIENE CONTROLADOS
-                        </span>
-                        <button type="button" id="btnVaciarCarrito" class="btn btn-sm btn-outline-danger py-1 px-2 d-none">
-                            <i class="bi bi-trash3 me-1"></i>Vaciar Lista
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
-                            <thead class="table-light text-muted small text-uppercase">
-                                <tr>
-                                    <th>Medicamento / Lotes FEFO & Cobertura Convenio</th>
-                                    <th class="text-end">P. Unitario</th>
-                                    <th class="text-center" style="width: 140px;">Cantidad</th>
-                                    <th class="text-end">Subtotal Línea</th>
-                                    <th class="text-center" style="width: 50px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbodyCarritoPos">
-                                <tr>
-                                    <td colspan="5" class="text-center py-5 text-muted">
-                                        <i class="bi bi-upc-scan fs-1 d-block mb-2 text-secondary"></i>
-                                        <div class="fw-bold">La lista de venta está vacía</div>
-                                        <div class="small">Dispara el lector de códigos de barra o selecciona un medicamento arriba para ir armando el pedido.</div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    <div id="switchResultadoBox" class="mt-2 d-none"></div>
                 </div>
 
                 <!-- Pie del Carrito: Medio de Pago en Caja, Vuelto Efectivo, Receta Controlada y Botón Único de Cobro -->
@@ -199,11 +197,11 @@
                         <input type="hidden" name="rut_cliente" id="rut_cliente" value="">
 
                         <div class="row g-3 mb-3">
-                            <div class="col-md-5">
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold small">Convenio Aplicado por Switch RUT</label>
                                 <input type="text" id="txtConvenioActivoInput" class="form-control bg-white fw-semibold" value="Particular (0% Dcto. — Valida RUT arriba)" readonly>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label fw-bold small">Medio de Pago en Caja</label>
                                 <select name="metodo_pago" id="metodo_pago" class="form-select fw-semibold">
                                     <option value="debito" selected>Tarjeta Débito (Pinpad Redcompra)</option>
@@ -212,10 +210,35 @@
                                     <option value="efectivo">Efectivo en Caja (Con cálculo de vuelto)</option>
                                 </select>
                             </div>
-                            <div class="col-md-3" id="colEfectivoRecibido">
-                                <label class="form-label fw-bold small">Efectivo Recibido ($)</label>
-                                <input type="number" id="inputEfectivoCliente" class="form-control font-mono fw-bold" placeholder="Ej. 20000">
-                                <div id="txtVueltoCliente" class="small fw-bold text-success mt-1"></div>
+                        </div>
+
+                        <!-- Calculadora Destacada de Pago en Efectivo y Vuelto Exacto -->
+                        <div id="colEfectivoRecibido" class="border border-success border-2 rounded-4 p-3 mb-3 bg-success-subtle bg-opacity-25 d-none">
+                            <div class="row g-3 align-items-center">
+                                <div class="col-lg-5">
+                                    <label class="form-label fw-extrabold small text-success mb-1">
+                                        <i class="bi bi-cash-coin me-1"></i>EFECTIVO RECIBIDO DEL CLIENTE ($ CLP)
+                                    </label>
+                                    <div class="input-group input-group-lg">
+                                        <span class="input-group-text bg-success text-white fw-bold border-0">$</span>
+                                        <input type="number" id="inputEfectivoCliente" class="form-control font-mono fw-extrabold fs-4 border-success" placeholder="Ej. 5000" min="0" step="10">
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-1 mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold font-mono btn-billete-rapido" data-monto="1000">$1.000</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold font-mono btn-billete-rapido" data-monto="2000">$2.000</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold font-mono btn-billete-rapido" data-monto="5000">$5.000</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold font-mono btn-billete-rapido" data-monto="10000">$10.000</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success fw-bold font-mono btn-billete-rapido" data-monto="20000">$20.000</button>
+                                        <button type="button" id="btnPagoExacto" class="btn btn-sm btn-dark fw-bold">Exacto</button>
+                                    </div>
+                                </div>
+                                <div class="col-lg-7">
+                                    <div id="boxVueltoGrande" class="rounded-4 p-3 bg-white border border-2 border-success-subtle text-center">
+                                        <div class="small text-uppercase fw-bold text-muted" id="lblVueltoEstado">Vuelto Exacto a Entregar</div>
+                                        <div id="txtVueltoCliente" class="display-6 fw-extrabold font-mono text-success my-1">$0</div>
+                                        <div id="txtDetalleVuelto" class="small text-muted">Ingresa el monto con el que paga el cliente para ver el vuelto exacto.</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -298,59 +321,55 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Columna Derecha: Cola de Lotes en Vitrina (Orden Estricto FEFO) -->
-        <div class="col-lg-4">
-            <div class="card-pro h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-sort-numeric-down text-success me-2"></i>
-                        <span>Stock en Vitrina (Orden de Salida FEFO)</span>
-                    </div>
-                    <span class="badge bg-success-subtle text-success rounded-pill">Prioridad Activa</span>
+    <!-- Modal Rápido Registrar Cliente desde Caja POS -->
+    <div class="modal fade" id="modalRegistrarClientePos" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i>Registrar Nuevo Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle">
-                            <thead class="table-light text-muted small text-uppercase">
-                                <tr>
-                                    <th>Medicamento / Barcode</th>
-                                    <th>Lote</th>
-                                    <th>Vence</th>
-                                    <th class="text-end">Vitrina</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($medicamentos as $med)
-                                    @foreach($med->lotes as $idx => $lote)
-                                        <tr class="{{ $idx === 0 ? 'table-success bg-opacity-10' : '' }}">
-                                            <td>
-                                                <div class="fw-bold small">{{ $med->nombre_comercial }}</div>
-                                                <span class="badge bg-light text-dark border font-mono" style="font-size: 0.72rem;">
-                                                    <i class="bi bi-upc me-1"></i>{{ $med->codigo_barra }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-dark font-mono">{{ $lote->numero_lote }}</span>
-                                                @if($idx === 0)
-                                                    <div class="text-success fw-bold" style="font-size: 0.68rem;">★ 1° EN SALIR</div>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                <span class="fw-semibold small">{{ $lote->fecha_vencimiento->format('d/m/Y') }}</span>
-                                            </td>
-                                            <td class="text-end">
-                                                <span class="badge {{ $lote->stock_vitrina <= 5 ? 'bg-danger' : 'bg-primary' }} rounded-pill px-3 py-1">
-                                                    {{ $lote->stock_vitrina }} u.
-                                                </span>
-                                            </td>
-                                        </tr>
+                <form id="formRegistrarClientePos">
+                    @csrf
+                    <div class="modal-body p-4">
+                        <div id="alertClientePos" class="alert d-none small py-2"></div>
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold">RUT *</label>
+                                <input type="text" name="rut" id="posCliRut" class="form-control form-control-sm font-mono fw-bold" placeholder="18.111.222-3" required>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label small fw-bold">Nombre Completo *</label>
+                                <input type="text" name="nombre_completo" id="posCliNombre" class="form-control form-control-sm" placeholder="Nombre y apellidos" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Teléfono</label>
+                                <input type="text" name="telefono" class="form-control form-control-sm" placeholder="+56 9 ...">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">Correo Electrónico</label>
+                                <input type="email" name="email" class="form-control form-control-sm" placeholder="cliente@correo.cl">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-bold">Convenio Asociado (Opcional)</label>
+                                <select name="convenio_id" class="form-select form-select-sm">
+                                    <option value="">-- Cliente Particular (Sin convenio) --</option>
+                                    @foreach($convenios as $conv)
+                                        <option value="{{ $conv->id }}">{{ $conv->nombre }} ({{ number_format($conv->porcentaje_descuento, 0) }}% Dcto.)</option>
                                     @endforeach
-                                @endforeach
-                            </tbody>
-                        </table>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                    <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-verde-medico btn-sm fw-bold px-4">
+                            <i class="bi bi-check2-circle me-1"></i>Guardar y Aplicar al POS
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -400,12 +419,16 @@
 
 @php
     $catalogoPosJson = $medicamentos->map(function ($med) {
+        $loteActivo = $med->lotes->first();
         return [
             'id' => $med->id,
             'codigo' => $med->codigo_barra,
             'nombre' => $med->nombre_comercial,
             'principio' => $med->principio_activo,
             'precio' => (float) $med->precio_unitario,
+            'descuento_lote' => (float) ($loteActivo->descuento_porcentaje ?? 0),
+            'motivo_descuento' => $loteActivo->motivo_descuento ?? null,
+            'promo_2x1' => (bool) ($loteActivo->promo_2x1 ?? false),
             'controlado' => (bool) $med->es_controlado,
             'receta' => (bool) $med->requiere_receta,
             'bioequivalente' => (bool) $med->es_bioequivalente,
@@ -415,6 +438,7 @@
                 'lote' => $l->numero_lote,
                 'vence' => $l->fecha_vencimiento->format('d/m/Y'),
                 'stock' => (int) $l->stock_vitrina,
+                'descuento' => (float) ($l->descuento_porcentaje ?? 0),
             ])->values(),
         ];
     })->values();
@@ -463,19 +487,68 @@
     let totalActualNumerico = 0;
     const formatCLP = (val) => '$' + Math.round(val || 0).toLocaleString('es-CL');
 
+    const colEfectivoRecibido = document.getElementById('colEfectivoRecibido');
+    const boxVueltoGrande = document.getElementById('boxVueltoGrande');
+    const lblVueltoEstado = document.getElementById('lblVueltoEstado');
+    const txtDetalleVuelto = document.getElementById('txtDetalleVuelto');
+
+    function togglePanelEfectivo() {
+        const esEfectivo = selectMetodo.value === 'efectivo';
+        colEfectivoRecibido.classList.toggle('d-none', !esEfectivo);
+        if (esEfectivo) {
+            actualizarVueltoEfectivo();
+        }
+    }
+
+    selectMetodo.addEventListener('change', function () {
+        togglePanelEfectivo();
+        if (this.value === 'efectivo') {
+            setTimeout(() => inputEfectivoCliente.focus(), 80);
+        }
+    });
+    togglePanelEfectivo();
+
+    document.querySelectorAll('.btn-billete-rapido').forEach(btn => {
+        btn.addEventListener('click', function () {
+            inputEfectivoCliente.value = this.dataset.monto;
+            actualizarVueltoEfectivo();
+        });
+    });
+
+    const btnPagoExacto = document.getElementById('btnPagoExacto');
+    if (btnPagoExacto) {
+        btnPagoExacto.addEventListener('click', function () {
+            inputEfectivoCliente.value = Math.round(totalActualNumerico);
+            actualizarVueltoEfectivo();
+        });
+    }
+
     function actualizarVueltoEfectivo() {
         const pagado = parseFloat(inputEfectivoCliente.value || '0');
         if (pagado > 0 && totalActualNumerico > 0) {
             const vuelto = pagado - totalActualNumerico;
             if (vuelto >= 0) {
-                txtVueltoCliente.className = 'small fw-bold text-success mt-1 font-mono';
-                txtVueltoCliente.textContent = 'Vuelto: ' + formatCLP(vuelto);
+                boxVueltoGrande.className = 'rounded-4 p-3 bg-white border border-2 border-success text-center';
+                lblVueltoEstado.className = 'small text-uppercase fw-bold text-success';
+                lblVueltoEstado.textContent = 'Vuelto Exacto a Entregar al Cliente';
+                txtVueltoCliente.className = 'display-6 fw-extrabold font-mono text-success my-1';
+                txtVueltoCliente.textContent = formatCLP(vuelto);
+                txtDetalleVuelto.textContent = `Recibido ${formatCLP(pagado)} − Total ${formatCLP(totalActualNumerico)} = Vuelto ${formatCLP(vuelto)}`;
             } else {
-                txtVueltoCliente.className = 'small fw-bold text-danger mt-1 font-mono';
-                txtVueltoCliente.textContent = 'Faltan: ' + formatCLP(Math.abs(vuelto));
+                boxVueltoGrande.className = 'rounded-4 p-3 bg-danger-subtle border border-2 border-danger text-center';
+                lblVueltoEstado.className = 'small text-uppercase fw-bold text-danger';
+                lblVueltoEstado.textContent = 'Efectivo Insuficiente';
+                txtVueltoCliente.className = 'display-6 fw-extrabold font-mono text-danger my-1';
+                txtVueltoCliente.textContent = 'Faltan ' + formatCLP(Math.abs(vuelto));
+                txtDetalleVuelto.textContent = `Recibido ${formatCLP(pagado)} de un total de ${formatCLP(totalActualNumerico)}`;
             }
         } else {
-            txtVueltoCliente.textContent = '';
+            boxVueltoGrande.className = 'rounded-4 p-3 bg-white border border-2 border-success-subtle text-center';
+            lblVueltoEstado.className = 'small text-uppercase fw-bold text-muted';
+            lblVueltoEstado.textContent = 'Vuelto Exacto a Entregar';
+            txtVueltoCliente.className = 'display-6 fw-extrabold font-mono text-muted my-1';
+            txtVueltoCliente.textContent = '$0';
+            txtDetalleVuelto.textContent = 'Ingresa el monto con el que paga el cliente o elige un billete rápido.';
         }
     }
 
@@ -538,20 +611,49 @@
             const pctCobertura = convenioSwitch.activo && convenioSwitch.cobertura[med.id] !== undefined
                 ? parseFloat(convenioSwitch.cobertura[med.id])
                 : 0;
-            const dctoLinea = pctCobertura > 0 ? Math.round(subBruto * (pctCobertura / 100)) : 0;
+            const pctLote = parseFloat(med.descuento_lote || 0);
+            const pctAplicado = Math.max(pctCobertura, pctLote);
+            const dctoPorcentaje = pctAplicado > 0 ? Math.round(subBruto * (pctAplicado / 100)) : 0;
+
+            const gratis2x1 = med.promo_2x1 ? Math.floor(cant / 2) : 0;
+            const dcto2x1 = gratis2x1 * med.precio;
+
+            const usaPromo2x1 = dcto2x1 > 0 && dcto2x1 >= dctoPorcentaje;
+            const usaDctoLote = !usaPromo2x1 && pctLote > 0 && pctLote >= pctCobertura;
+            const dctoLinea = Math.max(dctoPorcentaje, dcto2x1);
             const subFinalLinea = subBruto - dctoLinea;
             descuentoGlobal += dctoLinea;
 
             let badgeCoberturaHtml = '';
-            if (convenioSwitch.activo) {
+            if (usaPromo2x1) {
+                badgeCoberturaHtml = `
+                    <span class="badge bg-success text-white ms-1">
+                        <i class="bi bi-gift-fill me-1"></i>PROMO 2×1 APLICADA (${gratis2x1} gratis: -${formatCLP(dcto2x1)})
+                    </span>
+                `;
+            } else if (med.promo_2x1 && cant === 1) {
+                badgeCoberturaHtml = `
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info ms-1">
+                        <i class="bi bi-gift-fill me-1"></i>PROMO 2×1 ACTIVA — Lleva 2 y paga 1
+                    </span>
+                `;
+            }
+
+            if (!usaPromo2x1 && usaDctoLote) {
+                badgeCoberturaHtml += `
+                    <span class="badge bg-danger text-white ms-1">
+                        <i class="bi bi-lightning-charge-fill me-1"></i>${med.motivo_descuento || 'Descuento FEFO / Diario'} (-${pctLote}%: -${formatCLP(dctoLinea)})
+                    </span>
+                `;
+            } else if (!usaPromo2x1 && convenioSwitch.activo) {
                 if (pctCobertura > 0) {
-                    badgeCoberturaHtml = `
+                    badgeCoberturaHtml += `
                         <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">
                             <i class="bi bi-check-circle-fill me-1"></i>Cubierto por ${convenioSwitch.convenio_nombre} (-${pctCobertura}%: -${formatCLP(dctoLinea)})
                         </span>
                     `;
-                } else {
-                    badgeCoberturaHtml = `
+                } else if (!med.promo_2x1) {
+                    badgeCoberturaHtml += `
                         <span class="badge bg-secondary-subtle text-secondary border ms-1">
                             <i class="bi bi-dash-circle me-1"></i>No adherido a este convenio ($0 dcto)
                         </span>
@@ -842,37 +944,108 @@
         }
     });
 
+    // MODO LECTOR ACTIVADO (Manos libres: captura pistola sin hacer clic en el input + marco rojo + luz LED)
+    const scannerPanelContainer = document.getElementById('scannerPanelContainer');
+    const btnToggleLectorGlobal = document.getElementById('btnToggleLectorGlobal');
+    const txtToggleLector = document.getElementById('txtToggleLector');
+    const scannerStatusLed = document.getElementById('scannerStatusLed');
+    const scannerStatusTitle = document.getElementById('scannerStatusTitle');
+    const badgeLectorActivado = document.getElementById('badgeLectorActivado');
+
+    let lectorGlobalActivo = localStorage.getItem('pos_lector_global') === '1';
+
+    function aplicarEstadoLectorGlobal() {
+        if (lectorGlobalActivo) {
+            scannerPanelContainer.classList.add('scanner-panel-activo');
+            scannerInput.classList.add('scanner-input-activo');
+            btnToggleLectorGlobal.classList.remove('btn-success');
+            btnToggleLectorGlobal.classList.add('btn-danger');
+            txtToggleLector.textContent = 'Lector Activado';
+            scannerStatusLed.className = 'led-rojo';
+            scannerStatusTitle.style.setProperty('color', '#FCA5A5', 'important');
+            scannerStatusTitle.textContent = 'LECTOR ACTIVADO — Escanea con la pistola sin hacer clic en el buscador';
+            badgeLectorActivado.classList.remove('d-none');
+            badgeLectorActivado.classList.add('d-inline-flex');
+            scannerInput.placeholder = '🔴 LECTOR ACTIVADO — Escanea directo con la pistola sin hacer clic...';
+        } else {
+            scannerPanelContainer.classList.remove('scanner-panel-activo');
+            scannerInput.classList.remove('scanner-input-activo');
+            btnToggleLectorGlobal.classList.remove('btn-danger');
+            btnToggleLectorGlobal.classList.add('btn-success');
+            txtToggleLector.textContent = 'Activar Lector';
+            scannerStatusLed.className = 'scanner-dot';
+            scannerStatusTitle.style.setProperty('color', '#34D399', 'important');
+            scannerStatusTitle.textContent = 'Lector Láser / Código de Barras (Haz clic en el ícono verde para modo manos libres)';
+            badgeLectorActivado.classList.add('d-none');
+            badgeLectorActivado.classList.remove('d-inline-flex');
+            scannerInput.placeholder = 'Pistolea o escanea cada producto aquí para sumarlo al instante...';
+        }
+    }
+
+    aplicarEstadoLectorGlobal();
+
+    if (btnToggleLectorGlobal) {
+        btnToggleLectorGlobal.addEventListener('click', function () {
+            lectorGlobalActivo = !lectorGlobalActivo;
+            localStorage.setItem('pos_lector_global', lectorGlobalActivo ? '1' : '0');
+            aplicarEstadoLectorGlobal();
+            window.playScannerBeep(lectorGlobalActivo);
+            // Quitar foco del botón para que un Enter de la pistola no lo vuelva a presionar
+            this.blur();
+        });
+    }
+
     let hidBuffer = '';
     let lastKeyTime = 0;
     document.addEventListener('keydown', function (e) {
-        const activeTag = document.activeElement ? document.activeElement.tagName : '';
-        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+        const activeEl = document.activeElement;
+        const activeTag = activeEl ? activeEl.tagName : '';
+
+        // Si está escribiendo en otro campo (RUT, efectivo, modal cliente, receta), no interceptar
+        if ((activeTag === 'INPUT' && activeEl.id !== 'barcodeScannerInput') || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+            return;
+        }
+        // Si ya está enfocado en barcodeScannerInput, su propio listener se encarga
+        if (activeEl && activeEl.id === 'barcodeScannerInput') {
             return;
         }
 
+        // Si el lector global NO está activado, solo permitir ráfagas muy rápidas (<60ms);
+        // si ESTÁ activado (marco rojo), capturar cómodamente cualquier lectura de pistola (<350ms) sin hacer clic!
+        const umbralMs = lectorGlobalActivo ? 350 : 60;
         const now = Date.now();
-        if (now - lastKeyTime > 80) {
+        if (now - lastKeyTime > umbralMs) {
             hidBuffer = '';
         }
         lastKeyTime = now;
 
-        if (e.key === 'Enter') {
-            if (hidBuffer.length >= 4) {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            if (hidBuffer.length >= 3) {
                 e.preventDefault();
+                scannerInput.value = hidBuffer;
                 procesarCodigoDeBarras(hidBuffer);
                 hidBuffer = '';
             }
-        } else if (e.key.length === 1) {
-            hidBuffer += e.key;
+        } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            if (lectorGlobalActivo) {
+                e.preventDefault();
+                hidBuffer += e.key;
+                scannerInput.value = hidBuffer;
+            } else {
+                hidBuffer += e.key;
+            }
         }
     });
 
-    document.getElementById('btnAgregarManual').addEventListener('click', function () {
-        if (selectManualMed.value) {
-            procesarCodigoDeBarras(selectManualMed.value);
-            selectManualMed.value = '';
-        }
-    });
+    const btnAgregarManualEl = document.getElementById('btnAgregarManual');
+    if (btnAgregarManualEl && selectManualMed) {
+        btnAgregarManualEl.addEventListener('click', function () {
+            if (selectManualMed.value) {
+                procesarCodigoDeBarras(selectManualMed.value);
+                selectManualMed.value = '';
+            }
+        });
+    }
 
     document.getElementById('btnVaciarCarrito').addEventListener('click', function () {
         carrito = [];
@@ -1016,6 +1189,18 @@
                     `<li><strong>${l.medicamento || ''}</strong> — Lote <strong class="font-mono">${l.lote}</strong>: <strong>${l.cantidad} u.</strong> descontadas</li>`
                 ).join('');
 
+                const pagadoEfectivo = parseFloat(inputEfectivoCliente.value || '0');
+                const esEfectivoVenta = selectMetodo.value === 'efectivo';
+                const vueltoVenta = esEfectivoVenta && pagadoEfectivo >= (data.total || 0)
+                    ? (pagadoEfectivo - (data.total || 0))
+                    : null;
+                const bloqueVueltoTicket = vueltoVenta !== null
+                    ? `<div class="mt-2 p-2 rounded-3 bg-white border border-success d-flex flex-wrap justify-content-between align-items-center gap-2">
+                           <span class="fw-bold text-dark"><i class="bi bi-cash-coin text-success me-1"></i>Pago en Efectivo: ${formatCLP(pagadoEfectivo)}</span>
+                           <span class="badge bg-success fs-6 font-mono px-3 py-2">VUELTO A ENTREGAR: ${formatCLP(vueltoVenta)}</span>
+                       </div>`
+                    : '';
+
                 resultadoDiv.className = 'mt-3 alert alert-success border-success shadow-sm';
                 resultadoDiv.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -1027,10 +1212,12 @@
                             </a>
                         </div>
                     </div>
+                    ${bloqueVueltoTicket}
                     <div class="mt-2 small">Lotes descontados por algoritmo FEFO:</div>
                     <ul class="mb-0 small">${lotesHtml}</ul>
                 `;
                 carrito = [];
+                inputEfectivoCliente.value = '';
                 solicitudVisacionIdAprobada = null;
                 renderizarCarrito();
             } else {
@@ -1081,6 +1268,49 @@
         pinpadModalScreenMsg.className = 'small text-danger fw-bold';
         pinpadModalScreenMsg.innerHTML = '❌ TARJETA RECHAZADA POR EL BANCO EMISOR (SIN FONDOS)';
     });
+
+    // Registro rápido de cliente desde modal en Caja POS
+    const formCliPos = document.getElementById('formRegistrarClientePos');
+    const alertCliPos = document.getElementById('alertClientePos');
+    if (formCliPos) {
+        formCliPos.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            alertCliPos.classList.add('d-none');
+            const fd = new FormData(formCliPos);
+            try {
+                const res = await fetch("{{ route('clientes.store') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: fd
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alertCliPos.className = 'alert alert-danger small py-2';
+                    alertCliPos.textContent = data.message || 'Verifica los datos ingresados (el RUT podría estar duplicado).';
+                    return;
+                }
+                window.playScannerBeep(true);
+                const modalEl = document.getElementById('modalRegistrarClientePos');
+                const modalInst = bootstrap.Modal.getInstance(modalEl);
+                if (modalInst) modalInst.hide();
+                formCliPos.reset();
+
+                // Cargar RUT recién registrado y validar en el Switch de Convenios
+                const inputRut = document.getElementById('inputRutSwitch');
+                const btnValidar = document.getElementById('btnValidarRutSwitch');
+                if (inputRut && data.rut_formateado) {
+                    inputRut.value = data.rut_formateado;
+                    if (btnValidar) btnValidar.click();
+                }
+            } catch (err) {
+                alertCliPos.className = 'alert alert-danger small py-2';
+                alertCliPos.textContent = 'Error de conexión al registrar cliente.';
+            }
+        });
+    }
 })();
 </script>
 @endpush

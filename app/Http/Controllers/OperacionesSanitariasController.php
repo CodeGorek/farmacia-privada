@@ -188,7 +188,7 @@ class OperacionesSanitariasController extends Controller
      */
     public function toggleRecallCuarentena(Request $request, Lote $lote)
     {
-        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+        if (auth()->check() && !in_array(auth()->user()->rol, ['qf', 'admin', 'superadmin'], true)) {
             return redirect()->route('operaciones.index')->with(
                 'rbac_warning',
                 'Acceso Restringido: Solo el Químico Farmacéutico o el Administrador pueden decretar bloqueos por Alerta Recall ISP o emitir Órdenes de Compra.'
@@ -220,7 +220,7 @@ class OperacionesSanitariasController extends Controller
      */
     public function storeOrdenCompra(Request $request)
     {
-        if (auth()->check() && auth()->user()->rol === 'vendedor') {
+        if (auth()->check() && !in_array(auth()->user()->rol, ['qf', 'admin', 'superadmin'], true)) {
             return redirect()->route('operaciones.index')->with(
                 'rbac_warning',
                 'Acceso Restringido: Solo el Químico Farmacéutico o el Administrador pueden decretar bloqueos por Alerta Recall ISP o emitir Órdenes de Compra.'

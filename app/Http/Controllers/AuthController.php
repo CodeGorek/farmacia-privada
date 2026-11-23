@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\AusenciaReemplazo;
+use App\Models\AuditoriaSistema;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -59,8 +60,16 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
+        AuditoriaSistema::registrar(
+            'LOGIN',
+            'Autenticación',
+            "Inicio de sesión exitoso de {$user->name} ({$user->rol_nombre}).",
+            $user
+        );
+
         return match ($user->rol) {
             'qf' => redirect()->route('visacion.index')->with('success', "Bienvenido(a) D.T. {$user->name} (Químico Farmacéutico)."),
+            'superadmin' => redirect()->route('admin.personal.index')->with('success', "Bienvenido(a) {$user->name} (Super Administrador)."),
             'admin' => redirect()->route('admin.personal.index')->with('success', "Bienvenido(a) {$user->name} (Administrador General)."),
             default => redirect()->route('pos.index')->with('success', "Turno iniciado en Caja POS: {$user->name}."),
         };
@@ -86,6 +95,11 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        if (auth()->check()) {
+            $u = auth()->user();
+            AuditoriaSistema::registrar('LOGOUT', 'Autenticación', "Cierre de sesión de {$u->name}.", $u);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
